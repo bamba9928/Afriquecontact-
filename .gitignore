@@ -1,0 +1,28 @@
+echo .env>> .gitignore
+echo .venv>> .gitignore
+echo __pycache__/>> .gitignore
+echo *.sqlite3>> .gitignore
+# Python / Django
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+.env
+.env.*
+*.pem
+
+# Django media/static build
+media/
+staticfiles/
+
+# Virtualenv
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

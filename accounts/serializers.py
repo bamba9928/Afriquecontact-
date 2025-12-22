@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User, WhatsAppOTP
 from catalog.models import Job, Location
-from pros.models import ProfessionalProfile
+from pros.models import ProfilProfessionnel
 
 
 class RegisterSerializer(serializers.Serializer):

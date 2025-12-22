@@ -1,13 +1,23 @@
 from django.urls import path
-from .views import ProMeView, ProSearchView, ProPublishView, ProUnpublishView, AdminProPublishView, AdminProUnpublishView
+from .views import (
+    MonProfilProView,
+    RechercheProView,
+    PublicationProView,
+    RetraitPublicationProView,
+    AdminPublicationProView,
+    AdminRetraitPublicationProView
+)
 
 urlpatterns = [
-    path("me/", ProMeView.as_view(), name="pro_me"),
-    path("search/", ProSearchView.as_view(), name="pro_search"),
+    # Routes pour le professionnel (soi-même)
+    path("mon-profil/", MonProfilProView.as_view(), name="pro_me"),
+    path("recherche/", RechercheProView.as_view(), name="pro_recherche"),
 
-    path("publish/", ProPublishView.as_view(), name="pro_publish"),
-    path("unpublish/", ProUnpublishView.as_view(), name="pro_unpublish"),
+    # Actions de visibilité par le professionnel
+    path("publier/", PublicationProView.as_view(), name="pro_publier"),
+    path("masquer/", RetraitPublicationProView.as_view(), name="pro_masquer"),
 
-    path("<int:pro_id>/publish/", AdminProPublishView.as_view(), name="admin_pro_publish"),
-    path("<int:pro_id>/unpublish/", AdminProUnpublishView.as_view(), name="admin_pro_unpublish"),
+    # Actions d'administration
+    path("<int:pro_id>/admin-publier/", AdminPublicationProView.as_view(), name="admin_pro_publier"),
+    path("<int:pro_id>/admin-masquer/", AdminRetraitPublicationProView.as_view(), name="admin_pro_masquer"),
 ]

@@ -1,47 +1,53 @@
 from rest_framework import serializers
-from pros.models import ProfessionalProfile
+from pros.models import ProfilProfessionnel
 
 
 class ProMeSerializer(serializers.ModelSerializer):
-    user_phone = serializers.CharField(source="user.phone", read_only=True)
-    whatsapp_verified = serializers.BooleanField(source="user.whatsapp_verified", read_only=True)
+    """
+    Serializer complet utilisé par le professionnel pour gérer son propre profil.
+    """
+    telephone_utilisateur = serializers.CharField(source="utilisateur.phone", read_only=True)
+    whatsapp_verifie = serializers.BooleanField(source="utilisateur.whatsapp_verified", read_only=True)
 
     class Meta:
-        model = ProfessionalProfile
+        model = ProfilProfessionnel
         fields = [
             "id",
-            "user_phone",
-            "whatsapp_verified",
-            "business_name",
-            "job",
-            "location",
+            "telephone_utilisateur",
+            "whatsapp_verifie",
+            "nom_entreprise",
+            "metier",
+            "zone_geographique",
             "description",
-            "call_phone",
-            "whatsapp_phone",
+            "telephone_appel",
+            "telephone_whatsapp",
             "avatar",
-            "online_status",
-            "is_published",
+            "statut_en_ligne",
+            "est_publie",
             "latitude",
             "longitude",
-            "created_at",
-            "updated_at",
+            "cree_le",
+            "mis_a_jour_le",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "is_published"]
+        read_only_fields = ["id", "cree_le", "mis_a_jour_le", "est_publie"]
 
 
 class ProPublicSerializer(serializers.ModelSerializer):
+    """
+    Serializer allégé pour l'affichage public dans les résultats de recherche.
+    """
     class Meta:
-        model = ProfessionalProfile
+        model = ProfilProfessionnel
         fields = [
             "id",
-            "business_name",
-            "job",
-            "location",
+            "nom_entreprise",
+            "metier",
+            "zone_geographique",
             "description",
-            "call_phone",
-            "whatsapp_phone",
+            "telephone_appel",
+            "telephone_whatsapp",
             "avatar",
-            "online_status",
+            "statut_en_ligne",
             "latitude",
             "longitude",
         ]

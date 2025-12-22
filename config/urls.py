@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/moderation/", include("moderation.urls")),
     path("api/", include("billing.urls")),  # checkout + webhook + subscriptions/me
     path("api/subscriptions/", include("billing.urls")),
+    path("api/", include("annonces.urls"))
 ]
 
 if settings.DEBUG:

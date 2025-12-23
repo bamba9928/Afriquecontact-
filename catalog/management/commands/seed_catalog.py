@@ -73,159 +73,63 @@ class Command(BaseCommand):
             )
 
         # ----- Jobs
-        categories = {
-            "Tendances / Métiers les plus recherchés": [
-                "Coiffeur",
-                "Coiffeuse",
-                "Mécanicien",
-                "Ménagère",
-                "Nounou",
-                "Livreur",
-                "Soudeur",
-                "Chauffeur",
-                "Menuisier bois",
-                "Menuisier alu",
-                "Carreleur",
-                "Technicien",
-                "Gardien",
-                "Peintre",
-                "Plombier",
-                "Tailleur",
-                "Bijoutier",
-                "Informaticien",
-                "Tapissier",
-                "Infographe",
-                "Traiteur",
-                "Sérigraphe",
-                "Boulanger",
-                "Comptable",
-                "Décorateur",
-                "Cordonnier",
-                "Sculpteur",
-                "Photographe",
-            ],
-            "Numérique et Technologies de l'Information (TIC)": [
-                "Développement web",
-                "Data analyste",
-                "Spécialiste en cybersécurité",
-                "Community manager",
-                "Technicien en réseaux",
-            ],
-            "Énergies Renouvelables et Économie Verte": [
-                "Ingénieur en énergie solaire ou éolienne",
-                "Technicien de maintenance de systèmes solaires",
-                "Spécialiste en gestion durable",
-                "Expert en climat",
-            ],
-            "Agrobusiness et Agro-industrie": [
-                "Ingénieur agronome",
-                "Technicien de production",
-                "Responsable qualité",
-                "Spécialiste du marketing agroalimentaire",
-                "Spécialiste en gestion de la chaîne d'approvisionnement agricole",
-            ],
-            "BTP (Bâtiment et Travaux Publics) et Urbanisme": [
-                "Ingénieur civil",
-                "Architecte",
-                "Urbaniste",
-                "Technicien en construction",
-            ],
-            "E-commerce et Logistique": [
-                "Logisticien",
-                "Spécialiste en chaîne d'approvisionnement (Supply Chain)",
-                "Responsable de plateformes marchandes",
-                "Livreur professionnel",
-            ],
-            "Santé et Bien-être": [
-                "Médecin",
-                "Infirmier",
-                "Pharmacien",
-                "Technicien biomédical",
-                "Chercheur en santé publique",
-            ],
-            "Immobilier et Parking": [
-                "Agent immobilier",
-                "Gérant de parking automobile",
-            ],
-            "Gestion, Finance et Juridique": [
-                "Comptable",
-                "Auditeur",
-                "Contrôleur de gestion",
-                "Responsable RH",
-                "Responsable conformité",
-                "Juriste d'entreprise",
-                "Gestionnaire de portefeuille",
-            ],
-            "Commercial et Marketing": [
-                "Commercial/Vendeur terrain",
-                "Attaché commercial",
-                "Responsable marketing digital",
-                "Téléconseiller",
-                "Responsable service clients",
-            ],
-            "Technique et Industriel": [
-                "Technicien de maintenance mécanique",
-                "Technicien en électricité",
-                "Ingénieur de production",
-            ],
-            "Hôtellerie, Tourisme et Restauration": [
-                "Gestionnaire d'hôtel",
-                "Spécialiste du marketing touristique",
-                "Chef de cuisine",
-                "Guide touristique",
-            ],
-            "Éducation et Formation": [
-                "Formateur spécialisé mécanique",
-                "Formateur informatique",
-                "Formateur entrepreneuriat",
-                "Professeur (secondaire ou universitaire)",
-            ],
+        catalog_data = {
+            "Bâtiment et Travaux Publics": {
+                "Gros Œuvre": ["Maçon", "Ferrailleur", "Coffreur"],
+                "Second Œuvre": ["Peintre", "Carreleur", "Plombier", "Électricien"],
+                "Menuiserie": ["Menuisier bois", "Menuisier alu", "Charpentier"],
+            },
+            "Services à la Personne": {
+                "Maison": ["Ménagère", "Jardinier", "Gardien"],
+                "Famille": ["Nounou", "Aide à domicile"],
+                "Beauté": ["Coiffeur", "Coiffeuse", "Esthéticienne", "Tailleur"],
+            },
+            "Transport et Logistique": {
+                "Transport": ["Chauffeur", "Livreur"],
+                "Mécanique": ["Mécanicien", "Électricien auto", "Vulcanisateur"],
+            },
+            "Numérique": {
+                "Développement": ["Développeur web", "Développeur mobile"],
+                "Marketing": ["Community manager", "Infographe"],
+            }
         }
 
-        featured = {
-            "Coiffeur",
-            "Mécanicien",
-            "Ménagère",
-            "Nounou",
-            "Livreur",
-            "Soudeur",
-            "Chauffeur",
-            "Menuisier bois",
-            "Menuisier alu",
-            "Coiffeuse",
-            "Carreleur",
-            "Technicien",
-            "Gardien",
-            "Peintre",
-            "Plombier",
-            "Tailleur",
-            "Bijoutier",
-            "Informaticien",
-            "Tapissier",
-            "Infographe",
-            "Traiteur",
-            "Sérigraphe",
-            "Boulanger",
-            "Comptable",
-            "Décorateur",
-            "Cordonnier",
-            "Sculpteur",
-            "Photographe",
-        }
+        featured_jobs = ["Coiffeur", "Mécanicien", "Ménagère", "Livreur", "Plombier", "Maçon"]
 
-        for cat_name, jobs in categories.items():
-            cat, _ = JobCategory.objects.get_or_create(
+        for cat_name, subcats in catalog_data.items():
+            # Créer/Récupérer la catégorie parente
+            parent_cat, _ = JobCategory.objects.get_or_create(
                 name=cat_name,
+                parent=None,
                 defaults={"slug": unique_slug(JobCategory, cat_name)},
             )
-            for job_name in jobs:
-                Job.objects.get_or_create(
-                    category=cat,
-                    name=job_name,
-                    defaults={
-                        "slug": unique_slug(Job, job_name),
-                        "is_featured": job_name in featured,
-                    },
+
+            for subcat_name, job_names in subcats.items():
+                # Créer/Récupérer la sous-catégorie
+                sub_cat, _ = JobCategory.objects.get_or_create(
+                    name=subcat_name,
+                    parent=parent_cat,
+                    defaults={"slug": unique_slug(JobCategory, f"{cat_name}-{subcat_name}")},
                 )
 
-        self.stdout.write(self.style.SUCCESS("Seed catalog OK."))
+                for job_name in job_names:
+                    desired_featured = job_name in featured_jobs
+
+                    # Fix B : Slug stable basé sur la sous-catégorie
+                    job_slug = unique_slug(Job, f"{job_name}-{sub_cat.slug}")
+
+                    job, created = Job.objects.get_or_create(
+                        category=sub_cat,
+                        name=job_name,
+                        defaults={
+                            "slug": job_slug,
+                            "is_featured": desired_featured,
+                        },
+                    )
+
+                    # Fix A : Update si déjà existant
+                    if not created and job.is_featured != desired_featured:
+                        job.is_featured = desired_featured
+                        job.save(update_fields=["is_featured"])
+
+        self.stdout.write(self.style.SUCCESS("Seed catalog avec sous-catégories terminé !"))

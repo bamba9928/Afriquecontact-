@@ -1,10 +1,7 @@
 from __future__ import annotations
-
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
-
 from catalog.models import Location, JobCategory, Job
-
 
 def unique_slug(model, base: str) -> str:
     base = slugify(base)[:150] or "item"
@@ -15,121 +12,117 @@ def unique_slug(model, base: str) -> str:
         i += 1
     return slug
 
-
 class Command(BaseCommand):
-    help = "Seed catalog: locations + jobs"
+    help = "Seed catalog complet : 14 régions du Sénégal + catégories professionnelles du cahier des charges"
 
     def handle(self, *args, **options):
-        # ----- Locations (exemple Sénégal)
+        # 1. PAYS
         senegal, _ = Location.objects.get_or_create(
             type=Location.Type.COUNTRY,
             parent=None,
             name="Sénégal",
-            defaults={"slug": unique_slug(Location, "senegal")},
+            defaults={"slug": "senegal"},
         )
 
-        dakar_region, _ = Location.objects.get_or_create(
-            type=Location.Type.REGION,
-            parent=senegal,
-            name="Dakar",
-            defaults={"slug": unique_slug(Location, "dakar-region")},
-        )
+        # 2. LES 14 RÉGIONS ET VILLES PRINCIPALES
+        locations_data = {
+            "Dakar": ["Dakar Plateau", "Pikine", "Guédiawaye", "Rufisque", "Keur Massar"],
+            "Thiès": ["Thiès Ville", "Mbour", "Saly", "Tivaouane", "Joal-Fadiouth"],
+            "Diourbel": ["Touba", "Mbacké", "Diourbel Ville"],
+            "Saint-Louis": ["Saint-Louis Ville", "Richard-Toll", "Dagana", "Podor"],
+            "Ziguinchor": ["Ziguinchor Ville", "Bignona", "Oussouye", "Cap Skirring"],
+            "Kaolack": ["Kaolack Ville", "Nioro du Rip", "Guinguinéo"],
+            "Louga": ["Louga Ville", "Linguère", "Kébémer"],
+            "Fatick": ["Fatick Ville", "Foundiougne", "Gossas"],
+            "Kolda": ["Kolda Ville", "Vélingara"],
+            "Matam": ["Matam Ville", "Ourossogui", "Kanel"],
+            "Kaffrine": ["Kaffrine Ville", "Koungheul"],
+            "Tambacounda": ["Tambacounda Ville", "Bakel"],
+            "Kédougou": ["Kédougou Ville", "Salémata"],
+            "Sédhiou": ["Sédhiou Ville", "Goudomp"],
+        }
 
-        dakar_city, _ = Location.objects.get_or_create(
-            type=Location.Type.CITY,
-            parent=dakar_region,
-            name="Dakar",
-            defaults={"slug": unique_slug(Location, "dakar")},
-        )
-
-        for district in ["Plateau", "Médina", "Parcelles Assainies", "Yoff", "Ouakam", "Almadies"]:
-            Location.objects.get_or_create(
-                type=Location.Type.DISTRICT,
-                parent=dakar_city,
-                name=district,
-                defaults={"slug": unique_slug(Location, f"dakar-{district}")},
+        for reg_name, cities in locations_data.items():
+            region, _ = Location.objects.get_or_create(
+                type=Location.Type.REGION,
+                parent=senegal,
+                name=reg_name,
+                defaults={"slug": unique_slug(Location, f"{reg_name}-region")},
             )
+            for city_name in cities:
+                Location.objects.get_or_create(
+                    type=Location.Type.CITY,
+                    parent=region,
+                    name=city_name,
+                    defaults={"slug": unique_slug(Location, f"{city_name}-{reg_name}")},
+                )
 
-        thies_region, _ = Location.objects.get_or_create(
-            type=Location.Type.REGION,
-            parent=senegal,
-            name="Thiès",
-            defaults={"slug": unique_slug(Location, "thies-region")},
-        )
-
-        thies_city, _ = Location.objects.get_or_create(
-            type=Location.Type.CITY,
-            parent=thies_region,
-            name="Thiès",
-            defaults={"slug": unique_slug(Location, "thies")},
-        )
-
-        for district in ["Grand Standing", "Cité Lamy", "Randoulène"]:
-            Location.objects.get_or_create(
-                type=Location.Type.DISTRICT,
-                parent=thies_city,
-                name=district,
-                defaults={"slug": unique_slug(Location, f"thies-{district}")},
-            )
-
-        # ----- Jobs
+        # 3. MÉTIERS ET CATÉGORIES DU CAHIER DES CHARGES
         catalog_data = {
-            "Bâtiment et Travaux Publics": {
-                "Gros Œuvre": ["Maçon", "Ferrailleur", "Coffreur"],
-                "Second Œuvre": ["Peintre", "Carreleur", "Plombier", "Électricien"],
-                "Menuiserie": ["Menuisier bois", "Menuisier alu", "Charpentier"],
+            "Numérique et TIC": {
+                "Développement": ["Développement web", "Data analyste"],
+                "Infrastructure": ["Spécialiste en cybersécurité", "Technicien en réseaux"],
+                "Marketing Digital": ["Community manager"],
             },
-            "Services à la Personne": {
-                "Maison": ["Ménagère", "Jardinier", "Gardien"],
+            "Énergies et Environnement": {
+                "Solaire": ["Ingénieur en énergie solaire", "Technicien de maintenance solaire"],
+                "Expertise": ["Spécialiste en gestion durable", "Expert en climat"],
+            },
+            "Agrobusiness": {
+                "Production": ["Ingénieur agronome", "Technicien de production"],
+                "Qualité et Logistique": ["Responsable qualité", "Spécialiste supply chain agricole"],
+            },
+            "BTP et Urbanisme": {
+                "Conception": ["Architecte", "Urbaniste", "Ingénieur civil"],
+                "Chantier": ["Technicien en construction", "Maçon", "Ferrailleur", "Peintre", "Plombier"],
+            },
+            "Santé et Bien-être": {
+                "Médical": ["Médecin", "Infirmier", "Pharmacien"],
+                "Technique": ["Technicien biomédical", "Chercheur en santé publique"],
+            },
+            "Services de Maison": {
+                "Entretien": ["Ménagère", "Jardinier", "Gardien"],
                 "Famille": ["Nounou", "Aide à domicile"],
-                "Beauté": ["Coiffeur", "Coiffeuse", "Esthéticienne", "Tailleur"],
             },
-            "Transport et Logistique": {
-                "Transport": ["Chauffeur", "Livreur"],
-                "Mécanique": ["Mécanicien", "Électricien auto", "Vulcanisateur"],
-            },
-            "Numérique": {
-                "Développement": ["Développeur web", "Développeur mobile"],
-                "Marketing": ["Community manager", "Infographe"],
+            "Hôtellerie et Tourisme": {
+                "Gestion": ["Gestionnaire d'hôtel", "Chef de cuisine"],
+                "Services": ["Guide touristique", "Spécialiste marketing touristique"],
             }
         }
 
-        featured_jobs = ["Coiffeur", "Mécanicien", "Ménagère", "Livreur", "Plombier", "Maçon"]
+        # Liste des métiers "Les plus recherchés" pour le flag is_featured
+        featured_list = [
+            "Coiffeur", "Mécanicien", "Ménagère", "Nounou", "Livreur",
+            "Soudeur", "Chauffeur", "Plombier", "Maçon", "Tailleur"
+        ]
 
         for cat_name, subcats in catalog_data.items():
-            # Créer/Récupérer la catégorie parente
             parent_cat, _ = JobCategory.objects.get_or_create(
                 name=cat_name,
                 parent=None,
                 defaults={"slug": unique_slug(JobCategory, cat_name)},
             )
 
-            for subcat_name, job_names in subcats.items():
-                # Créer/Récupérer la sous-catégorie
+            for subcat_name, jobs in subcats.items():
                 sub_cat, _ = JobCategory.objects.get_or_create(
                     name=subcat_name,
                     parent=parent_cat,
-                    defaults={"slug": unique_slug(JobCategory, f"{cat_name}-{subcat_name}")},
+                    defaults={"slug": unique_slug(JobCategory, f"{subcat_name}-{cat_name}")},
                 )
 
-                for job_name in job_names:
-                    desired_featured = job_name in featured_jobs
-
-                    # Fix B : Slug stable basé sur la sous-catégorie
-                    job_slug = unique_slug(Job, f"{job_name}-{sub_cat.slug}")
-
+                for job_name in jobs:
+                    is_feat = job_name in featured_list
                     job, created = Job.objects.get_or_create(
                         category=sub_cat,
                         name=job_name,
                         defaults={
-                            "slug": job_slug,
-                            "is_featured": desired_featured,
+                            "slug": unique_slug(Job, f"{job_name}-{subcat_name}"),
+                            "is_featured": is_feat
                         },
                     )
-
-                    # Fix A : Update si déjà existant
-                    if not created and job.is_featured != desired_featured:
-                        job.is_featured = desired_featured
+                    # Mise à jour si le métier existe déjà pour garantir l'idempotence
+                    if not created and job.is_featured != is_feat:
+                        job.is_featured = is_feat
                         job.save(update_fields=["is_featured"])
 
-        self.stdout.write(self.style.SUCCESS("Seed catalog avec sous-catégories terminé !"))
+        self.stdout.write(self.style.SUCCESS("Seed catalog complet terminé avec succès !"))

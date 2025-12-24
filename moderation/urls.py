@@ -1,5 +1,4 @@
 from django.urls import path
-
 from moderation.views import (
     SignalementCreateView,
     MesSignalementsListView,
@@ -8,11 +7,17 @@ from moderation.views import (
 )
 
 urlpatterns = [
-    # Routes pour les utilisateurs
-    path("signalements/", SignalementCreateView.as_view(), name="signalement_creer"),
-    path("signalements/mes-signalements/", MesSignalementsListView.as_view(), name="signalement_mes_listes"),
+    # --- Espace Utilisateur / Client ---
+    # POST pour créer un signalement (E1)
+    path("signaler/", SignalementCreateView.as_view(), name="signalement-creer"),
 
-    # Routes pour l'administration
-    path("admin/signalements/", AdminSignalementsListView.as_view(), name="admin_signalements_liste"),
-    path("admin/signalements/<int:pk>/", AdminSignalementStatusUpdateView.as_view(), name="admin_signalement_maj"),
+    # GET pour voir l'historique de ses propres signalements
+    path("mes-signalements/", MesSignalementsListView.as_view(), name="signalement-mes-listes"),
+
+    # --- Espace Administration (Modération) ---
+    # GET pour lister et filtrer tous les signalements (E2)
+    path("admin/liste/", AdminSignalementsListView.as_view(), name="admin-signalements-liste"),
+
+    # PATCH/PUT pour traiter un signalement spécifique (E2/E3)
+    path("admin/<int:pk>/traiter/", AdminSignalementStatusUpdateView.as_view(), name="admin-signalement-traiter"),
 ]

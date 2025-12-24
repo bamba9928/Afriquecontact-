@@ -5,19 +5,32 @@ from .views import (
     PublicationProView,
     RetraitPublicationProView,
     AdminPublicationProView,
-    AdminRetraitPublicationProView
+    AdminRetraitPublicationProView,
+    MediaProCreateView,
+    ContactFavoriView,
+    ContactFavoriDestroyView
 )
 
 urlpatterns = [
-    # Routes pour le professionnel (soi-même)
-    path("mon-profil/", MonProfilProView.as_view(), name="pro_me"),
+    # --- Recherche Publique ---
+    # Endpoint pour le mobile : GET /api/pros/recherche/?job=...&lat=...
     path("recherche/", RechercheProView.as_view(), name="pro_recherche"),
 
-    # Actions de visibilité par le professionnel
-    path("publier/", PublicationProView.as_view(), name="pro_publier"),
-    path("masquer/", RetraitPublicationProView.as_view(), name="pro_masquer"),
+    # --- Espace Professionnel (Gestion de soi) ---
+    path("me/", MonProfilProView.as_view(), name="pro_me"),
+    path("me/publier/", PublicationProView.as_view(), name="pro_publier"),
+    path("me/masquer/", RetraitPublicationProView.as_view(), name="pro_masquer"),
 
-    # Actions d'administration
-    path("<int:pro_id>/admin-publier/", AdminPublicationProView.as_view(), name="admin_pro_publier"),
-    path("<int:pro_id>/admin-masquer/", AdminRetraitPublicationProView.as_view(), name="admin_pro_masquer"),
+    # Gestion de la galerie (Photos, Vidéos, CV)
+    path("me/media/", MediaProCreateView.as_view(), name="pro_media_create"),
+
+    # --- Espace Client (Mes Contacts / Favoris) ---
+    # GET pour lister, POST pour ajouter
+    path("favoris/", ContactFavoriView.as_view(), name="pro_favoris_list_add"),
+    # DELETE pour supprimer un favori spécifique
+    path("favoris/<int:professionnel_id>/", ContactFavoriDestroyView.as_view(), name="pro_favoris_delete"),
+
+    # --- Administration (Modération) ---
+    path("admin/<int:pro_id>/publier/", AdminPublicationProView.as_view(), name="admin_pro_publier"),
+    path("admin/<int:pro_id>/masquer/", AdminRetraitPublicationProView.as_view(), name="admin_pro_masquer"),
 ]

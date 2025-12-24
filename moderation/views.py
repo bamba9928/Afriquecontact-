@@ -10,20 +10,25 @@ from moderation.serializers import (
     SignalementSerializer,
     SignalementStatusUpdateSerializer,
 )
-from pros.permissions import EstAdministrateur  # Adapté selon votre logique de permissions
+from pros.permissions import EstAdministrateur
 
 
 class SignalementCreateView(generics.CreateAPIView):
     """
-    Vue pour permettre à un utilisateur authentifié de créer un signalement.
+    Vue pour permettre à un client de signaler un pro (E1).
+    L'auteur est automatiquement défini sur l'utilisateur connecté.
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SignalementCreateSerializer
 
+    def perform_create(self, serializer):
+        # On injecte l'auteur automatiquement à la création
+        serializer.save(auteur=self.request.user)
+
 
 class MesSignalementsListView(generics.ListAPIView):
     """
-    Vue permettant à l'utilisateur de voir l'historique de ses propres signalements.
+    Historique personnel des signalements envoyés par l'utilisateur.
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SignalementSerializer
@@ -31,42 +36,51 @@ class MesSignalementsListView(generics.ListAPIView):
     def get_queryset(self):
         return Signalement.objects.select_related("professionnel", "auteur").filter(
             auteur=self.request.user
-        )
+        ).order_by("-cree_le")
 
 
 class AdminSignalementsListView(generics.ListAPIView):
     """
-    Vue réservée aux administrateurs pour lister et filtrer tous les signalements.
+    Interface Admin pour lister et filtrer tous les signalements (E2).
     """
     permission_classes = [permissions.IsAuthenticated, EstAdministrateur]
     serializer_class = SignalementSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ["statut", "professionnel", "auteur"]
-    ordering_fields = ["cree_le", "traite_le", "statut"]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+
+    # Filtrage par statut (Ouvert/En cours/Résolu) et recherche par nom d'entreprise
+    filterset_fields = ["statut", "raison"]
+    search_fields = ["professionnel__nom_entreprise", "message"]
+    ordering_fields = ["cree_le", "traite_le"]
     ordering = ["-cree_le"]
 
     def get_queryset(self):
-        return Signalement.objects.select_related("professionnel", "auteur", "traite_par")
+        # Utilisation de select_related pour optimiser la base de données
+        return Signalement.objects.select_related(
+            "professionnel",
+            "auteur",
+            "traite_par"
+        ).all()
 
 
 class AdminSignalementStatusUpdateView(generics.UpdateAPIView):
     """
-    Vue permettant aux administrateurs de traiter un signalement et de mettre à jour son statut.
+    Traitement des signalements par l'administrateur (E2/E3).
+    Enregistre qui a traité le signalement et à quel moment.
     """
     permission_classes = [permissions.IsAuthenticated, EstAdministrateur]
     serializer_class = SignalementStatusUpdateSerializer
     queryset = Signalement.objects.all()
 
     def perform_update(self, serializer):
-        # Sauvegarde du nouveau statut
+        # On sauvegarde les changements (statut et note_admin)
         signalement = serializer.save()
 
-        # Logique de gestion du traitement automatique
+        # Si le statut change vers un état traité, on marque l'admin et la date
         if signalement.statut != Signalement.Statut.OUVERT:
             signalement.traite_par = self.request.user
             signalement.traite_le = timezone.now()
         else:
-            # Si le statut revient à "Ouvert", on réinitialise les infos de traitement
+            # Réinitialisation si l'admin décide de remettre le dossier en "Ouvert"
             signalement.traite_par = None
             signalement.traite_le = None
 

@@ -1,28 +1,55 @@
-echo .env>> .gitignore
-echo .venv>> .gitignore
-echo __pycache__/>> .gitignore
-echo *.sqlite3>> .gitignore
-# Python / Django
+# Python
 __pycache__/
 *.py[cod]
-*.sqlite3
-*.log
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# Environnements virtuels
+.venv/
+venv/
+ENV/
+env/
+
+# Configuration & secrets
 .env
 .env.*
 *.pem
+*.key
+*.crt
 
-# Django media/static build
+# Base de données
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Django
+*.pyc
 media/
 staticfiles/
-
-# Virtualenv
-.venv/
-venv/
+*.mo
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+.idea/
+.venv/
+__pycache__/
+*.pyc
+.env
+

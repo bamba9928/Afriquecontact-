@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db.models import F, FloatField, Value, ExpressionWrapper
+from django.db.models import F, FloatField, Value, ExpressionWrapper, Prefetch
 from django.db.models.functions import Radians, Sin, Cos, ACos
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
@@ -11,7 +11,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 
-from .models import ProfilProfessionnel, ContactFavori
+from billing.models import Subscription
+from .models import ProfilProfessionnel, ContactFavori, MediaPro
 from .serializers import ProMeSerializer, ProPublicSerializer, ContactFavoriSerializer, MediaProSerializer
 from .permissions import EstProfessionnel, EstAdministrateur
 
@@ -27,6 +28,10 @@ class PaginationRecherchePro(PageNumberPagination):
 # --- Vues Publiques ---
 
 class RechercheProView(generics.ListAPIView):
+    """
+    Vue de recherche optimisée pour le mobile.
+    Supporte le tri par distance, les filtres métiers et zones.
+    """
     permission_classes = [permissions.AllowAny]
     serializer_class = ProPublicSerializer
     pagination_class = PaginationRecherchePro
@@ -38,8 +43,14 @@ class RechercheProView(generics.ListAPIView):
     ordering = ["-mis_a_jour_le"]
 
     def get_queryset(self):
+        # Optimisation SQL : On pré-charge les abonnements actifs pour le masquage des numéros
+        active_subs = Subscription.objects.filter(status=Subscription.Status.ACTIVE, end_at__gt=now())
+
         qs = ProfilProfessionnel.objects.select_related(
             "utilisateur", "metier", "zone_geographique"
+        ).prefetch_related(
+            Prefetch('utilisateur__subscriptions', queryset=active_subs, to_attr='active_sub'),
+            'media'
         ).filter(est_publie=True)
 
         lat = self.request.query_params.get("lat")
@@ -54,6 +65,7 @@ class RechercheProView(generics.ListAPIView):
 
                 qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
+                # Formule Haversine pour la distance
                 distance_expr = ExpressionWrapper(
                     Value(6371.0) * ACos(
                         Cos(Radians(Value(lat_f))) * Cos(Radians(F("latitude"))) *
@@ -77,7 +89,7 @@ class RechercheProView(generics.ListAPIView):
         return qs
 
 
-# --- Vues Professionnelles (Gestion de soi) ---
+# --- Vues Professionnelles ---
 
 class MonProfilProView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, EstProfessionnel]
@@ -90,45 +102,17 @@ class MonProfilProView(generics.RetrieveUpdateAPIView):
 class PublicationProView(APIView):
     """
     Action pour rendre le profil visible publiquement.
-    Règle: publication possible uniquement si abonnement/paiement actif (1000F/mois).
+    Vérifie l'abonnement actif (1000F/mois) via le modèle Subscription.
     """
     permission_classes = [permissions.IsAuthenticated, EstProfessionnel]
 
-    def _abonnement_actif(self, pro, user) -> bool:
-        """
-        Adapte cette logique à ton modèle réel d'abonnement/paiement.
-        Patterns supportés (si existants) :
-          - pro.abonnement_actif (bool)
-          - pro.abonnement_expire_le (date/datetime)
-          - user.abonnement.est_actif / user.abonnement.expire_le
-        """
-        if hasattr(pro, "abonnement_actif"):
-            return bool(getattr(pro, "abonnement_actif"))
-
-        if hasattr(pro, "abonnement_expire_le"):
-            expire_le = getattr(pro, "abonnement_expire_le")
-            if expire_le is None:
-                return False
-            # expire_le peut être date ou datetime
-            try:
-                return expire_le >= now()
-            except TypeError:
-                return expire_le >= now().date()
-
-        if hasattr(user, "abonnement") and user.abonnement is not None:
-            abo = user.abonnement
-            if hasattr(abo, "est_actif"):
-                return bool(abo.est_actif)
-            if hasattr(abo, "expire_le"):
-                expire_le = abo.expire_le
-                if expire_le is None:
-                    return False
-                try:
-                    return expire_le >= now()
-                except TypeError:
-                    return expire_le >= now().date()
-
-        return False
+    def _abonnement_actif(self, user) -> bool:
+        # Vérification réelle basée sur le modèle Subscription [cite: 394, 412]
+        return Subscription.objects.filter(
+            user=user,
+            status=Subscription.Status.ACTIVE,
+            end_at__gt=now()
+        ).exists()
 
     def post(self, request):
         pro = request.user.pro_profile
@@ -139,11 +123,11 @@ class PublicationProView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ Vérification abonnement actif (1000F/mois)
-        if not self._abonnement_actif(pro, request.user):
+        # Vérification de l'abonnement à 1000F/Mois [cite: 268, 269]
+        if not self._abonnement_actif(request.user):
             return Response(
-                {"detail": "Abonnement inactif. Veuillez régler 1000F/mois pour publier votre profil."},
-                status=status.HTTP_402_PAYMENT_REQUIRED,  # ou 403 si tu préfères
+                {"detail": "Abonnement inactif. Veuillez régler 1000F/mois pour être visible."},
+                status=status.HTTP_402_PAYMENT_REQUIRED
             )
 
         champs_obligatoires = [
@@ -152,14 +136,13 @@ class PublicationProView(APIView):
         ]
         if not all(champs_obligatoires):
             return Response(
-                {"detail": "Profil incomplet (Nom, Téléphone, Métier ou Ville manquant)."},
+                {"detail": "Profil incomplet pour publication."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         pro.est_publie = True
         pro.save(update_fields=["est_publie"])
-        return Response({"detail": "Votre profil est désormais visible publiquement."})
-
+        return Response({"detail": "Votre profil est désormais visible."})
 
 class RetraitPublicationProView(APIView):
     permission_classes = [permissions.IsAuthenticated, EstProfessionnel]

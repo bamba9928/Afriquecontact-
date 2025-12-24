@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 echo .env>> .gitignore
 echo .venv>> .gitignore
 echo __pycache__/>> .gitignore
@@ -18,11 +19,66 @@ staticfiles/
 # Virtualenv
 .venv/
 venv/
+=======
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# Environnements virtuels
+.venv/
+venv/
+ENV/
+env/
+
+# Configuration & secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Base de données
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Django
+*.pyc
+media/
+staticfiles/
+*.mo
+>>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
 
 # IDE
 .idea/
 .vscode/
+<<<<<<< HEAD
+=======
+*.swp
+*.swo
+*~
+>>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
 
 # OS
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
+=======
+desktop.ini
+.idea/
+.venv/
+__pycache__/
+*.pyc
+.env
+
+>>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6

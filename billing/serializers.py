@@ -18,7 +18,7 @@ class CheckoutSerializer(serializers.Serializer):
         if value < SUB_AMOUNT_XOF:
             raise serializers.ValidationError(f"Le montant minimum est de {SUB_AMOUNT_XOF} XOF.")
         return value
-<<<<<<< HEAD
+
 
 
 class SubscriptionMeSerializer(serializers.ModelSerializer):
@@ -26,15 +26,15 @@ class SubscriptionMeSerializer(serializers.ModelSerializer):
     Serializer pour l'état de l'abonnement (utilisé par SubscriptionMeView).
     """
     is_active = serializers.BooleanField(source="is_active", read_only=True)
-=======
+
 class SubscriptionMeSerializer(serializers.ModelSerializer):
     is_active = serializers.SerializerMethodField()
->>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
+
     days_left = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
-<<<<<<< HEAD
+
         fields = [
             "status",
             "start_at",
@@ -52,8 +52,6 @@ class SubscriptionMeSerializer(serializers.ModelSerializer):
             return max(0, delta.days)
         return 0
 
-
-=======
         fields = ["status", "start_at", "end_at", "is_active", "days_left", "last_payment"]
 
     def get_is_active(self, obj):
@@ -65,7 +63,6 @@ class SubscriptionMeSerializer(serializers.ModelSerializer):
             return max(0, delta.days)
         return 0
 
->>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
 class PaymentSerializer(serializers.ModelSerializer):
     """
     Optionnel : Pour afficher l'historique des paiements au professionnel.

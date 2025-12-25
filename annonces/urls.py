@@ -3,22 +3,29 @@ from .views import (
     AnnonceCreateView,
     AnnoncePublicListView,
     MesAnnoncesListView,
-    AdminApprobationAnnonceView
+    AdminApprobationAnnonceView,
+
+    # nouveaux (non-breaking)
+    AnnonceDetailView,
+    AnnonceUpdateView,
+    AnnonceDeleteView,
+    AnnonceSearchView,
+    AnnonceViewIncrement,
 )
 
 urlpatterns = [
     # --- Flux Public ---
-    # Liste des annonces approuvées (Filtres type, catégorie, zone via query params)
     path("", AnnoncePublicListView.as_view(), name="annonces-liste"),
+    path("search/", AnnonceSearchView.as_view(), name="annonces-search"),
+    path("<slug:slug>/", AnnonceDetailView.as_view(), name="annonces-detail"),
+    path("<slug:slug>/view/", AnnonceViewIncrement.as_view(), name="annonces-view"),
 
     # --- Espace Utilisateur ---
-    # Créer une annonce (Gratuit pour DEMANDE, 1000F pour OFFRE)
     path("creer/", AnnonceCreateView.as_view(), name="annonces-creer"),
-
-    # Voir ses propres annonces (pour modification ou suppression)
     path("mes-annonces/", MesAnnoncesListView.as_view(), name="annonces-mes-annonces"),
+    path("<slug:slug>/modifier/", AnnonceUpdateView.as_view(), name="annonces-modifier"),
+    path("<slug:slug>/supprimer/", AnnonceDeleteView.as_view(), name="annonces-supprimer"),
 
     # --- Espace Administration ---
-    # Approuver ou rejeter une annonce spécifique (Réservé Admin)
     path("admin/<int:pk>/approuver/", AdminApprobationAnnonceView.as_view(), name="admin-annonces-approuver"),
 ]

@@ -31,6 +31,7 @@ urlpatterns = [
     # Annonces (Offres et Demandes d'emploi)
     # Accessible via /api/annonces/
     path("api/annonces/", include("annonces.urls")),
+    path("api/marketing/", include("marketing.urls")),
 
     # Modération (Signalements)
     # Accessible via /api/moderation/

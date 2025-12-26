@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 echo .env>> .gitignore
 echo .venv>> .gitignore
 echo __pycache__/>> .gitignore
@@ -12,14 +12,10 @@ __pycache__/
 .env.*
 *.pem
 
-# Django media/static build
-media/
-staticfiles/
-
 # Virtualenv
 .venv/
 venv/
-=======
+
 # Python
 __pycache__/
 *.py[cod]
@@ -57,23 +53,17 @@ env/
 media/
 staticfiles/
 *.mo
->>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
-
 # IDE
 .idea/
 .vscode/
-<<<<<<< HEAD
-=======
+
 *.swp
 *.swo
 *~
->>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6
 
 # OS
 .DS_Store
 Thumbs.db
-<<<<<<< HEAD
-=======
 desktop.ini
 .idea/
 .venv/
@@ -81,4 +71,3 @@ __pycache__/
 *.pyc
 .env
 
->>>>>>> c36ea50c2c528fc5b02a9940d5429858427aa5e6

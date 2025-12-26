@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -36,6 +37,9 @@ urlpatterns = [
     # Modération (Signalements)
     # Accessible via /api/moderation/
     path("api/moderation/", include("moderation.urls")),
+    path('accounts/login/', TemplateView.as_view(template_name='accounts/login.html'), name='login_page'),
+    path('accounts/register/', TemplateView.as_view(template_name='accounts/register.html'), name='register_page'),
+    path('accounts/verify-otp/', TemplateView.as_view(template_name='accounts/verify_otp.html'), name='verify_otp_page'),
 ]
 
 # Gestion des fichiers média (Avatars, Photos de réalisations, CV) en développement

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Connexion - Sénégal Contacts{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
+    <h2 class="text-2xl font-bold text-center text-primary mb-6">Bon retour parmi nous</h2>
+
+    <form id="loginForm" class="space-y-4">
+        <div>
+            <label class="block text-gray-700">Numéro de téléphone</label>
+            <input type="tel" id="phone" name="phone" placeholder="Ex: 771234567"
+                   class="w-full p-2 border border-gray-300 rounded focus:border-secondary focus:outline-none" required>
+        </div>
+        <div>
+            <label class="block text-gray-700">Mot de passe</label>
+            <input type="password" id="password" name="password"
+                   class="w-full p-2 border border-gray-300 rounded focus:border-secondary focus:outline-none" required>
+        </div>
+
+        <div id="error-msg" class="text-red-500 text-sm hidden"></div>
+
+        <button type="submit" class="w-full bg-secondary text-white py-2 rounded hover:bg-blue-700 transition">
+            Se connecter
+        </button>
+    </form>
+
+    <p class="mt-4 text-center text-sm">
+        Pas encore de compte ? <a href="/accounts/register/" class="text-secondary font-bold">Créer un compte</a>
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('error-msg');
+
+        try {
+            // Appel à votre API existante
+            const response = await fetch('/api/auth/login/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: phone, password: password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Stockage des tokens (JWT) dans le LocalStorage ou Cookies
+                localStorage.setItem('access_token', data.access);
+                localStorage.setItem('refresh_token', data.refresh);
+                // Redirection vers le tableau de bord ou l'accueil
+                window.location.href = '/';
+            } else {
+                errorDiv.innerText = data.detail || "Erreur de connexion.";
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (error) {
+            errorDiv.innerText = "Erreur réseau.";
+            errorDiv.classList.remove('hidden');
+        }
+    });
+</script>
+{% endblock %}

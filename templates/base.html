@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sénégal Contacts - Trouvez un pro proche de vous{% endblock %}</title>
+
+    <meta name="description" content="{% block description %}La plateforme de référence au Sénégal pour trouver les meilleurs professionnels : mécaniciens, coiffeurs, plombiers, et plus encore.{% endblock %}">
+    <meta name="keywords" content="Sénégal, Services, Emploi, Professionnels, Dakar, Touba, Thiès, Annonces">
+    <meta name="author" content="ContactAfrique">
+
+    <meta property="og:title" content="{% block og_title %}Sénégal Contacts{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Trouvez un expert ou publiez vos services au Sénégal.{% endblock %}">
+    <meta property="og:image" content="/static/images/logo_share.png">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#701705', // Rouge brique (Background spec)
+                        secondary: '#1447E6', // Bleu (Reste spec)
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col min-h-screen">
+
+    <nav class="bg-primary text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold">🇸🇳 ContactAfrique</a>
+            <div>
+                <a href="/accounts/login/" class="px-4 py-2 hover:text-gray-200">Connexion</a>
+                <a href="/accounts/register/" class="bg-white text-primary px-4 py-2 rounded font-bold hover:bg-gray-100">Inscription</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto p-4">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-gray-800 text-white text-center p-4 mt-8">
+        <p>&copy; 2025 Sénégal Contacts - km14 Rte de Rufisque, Dakar.</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

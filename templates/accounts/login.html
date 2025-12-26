@@ -8,61 +8,225 @@
 
     <form id="loginForm" class="space-y-4">
         <div>
-            <label class="block text-gray-700">Numéro de téléphone</label>
-            <input type="tel" id="phone" name="phone" placeholder="Ex: 771234567"
-                   class="w-full p-2 border border-gray-300 rounded focus:border-secondary focus:outline-none" required>
+            <label for="phone" class="block text-gray-700 font-medium mb-2">Numéro de téléphone</label>
+            <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="Ex: 771234567"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:border-secondary focus:ring-2 focus:ring-secondary focus:outline-none transition"
+                required
+                autocomplete="tel">
         </div>
+
         <div>
-            <label class="block text-gray-700">Mot de passe</label>
-            <input type="password" id="password" name="password"
-                   class="w-full p-2 border border-gray-300 rounded focus:border-secondary focus:outline-none" required>
+            <label for="password" class="block text-gray-700 font-medium mb-2">Mot de passe</label>
+            <div class="relative">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:border-secondary focus:ring-2 focus:ring-secondary focus:outline-none transition"
+                    required
+                    autocomplete="current-password">
+                <button
+                    type="button"
+                    id="togglePassword"
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <div id="error-msg" class="text-red-500 text-sm hidden"></div>
+        <!-- Message d'erreur -->
+        <div id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <span id="error-text"></span>
+        </div>
 
-        <button type="submit" class="w-full bg-secondary text-white py-2 rounded hover:bg-blue-700 transition">
-            Se connecter
+        <!-- Bouton de soumission -->
+        <button
+            type="submit"
+            id="submitBtn"
+            class="w-full bg-secondary text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            <span id="btnText">Se connecter</span>
+            <span id="btnLoader" class="hidden">
+                <svg class="animate-spin inline-block w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Connexion en cours...
+            </span>
         </button>
     </form>
 
-    <p class="mt-4 text-center text-sm">
-        Pas encore de compte ? <a href="/accounts/register/" class="text-secondary font-bold">Créer un compte</a>
+    <!-- Lien d'inscription -->
+    <p class="mt-6 text-center text-sm text-gray-600">
+        Pas encore de compte ?
+        <a href="/accounts/register/" class="text-secondary font-bold hover:underline">
+            Créer un compte
+        </a>
+    </p>
+
+    <!-- Mot de passe oublié (optionnel) -->
+    <p class="mt-2 text-center text-sm text-gray-600">
+        <a href="/accounts/password-reset/" class="text-gray-500 hover:text-secondary hover:underline">
+            Mot de passe oublié ?
+        </a>
     </p>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    // ===== Toggle password visibility =====
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    togglePassword?.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        // Changer l'icône
+        if (type === 'text') {
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+            `;
+        } else {
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            `;
+        }
+    });
+
+    // ===== Login Form Handler =====
+    const loginForm = document.getElementById('loginForm');
+    const errorDiv = document.getElementById('error-msg');
+    const errorText = document.getElementById('error-text');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+
+    loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const phone = document.getElementById('phone').value;
+
+        const phone = document.getElementById('phone').value.trim();
         const password = document.getElementById('password').value;
-        const errorDiv = document.getElementById('error-msg');
+
+        // Validation basique
+        if (!phone || !password) {
+            showError('Veuillez remplir tous les champs.');
+            return;
+        }
+
+        // Désactiver le bouton et afficher le loader
+        setLoading(true);
+        hideError();
 
         try {
-            // Appel à votre API existante
             const response = await fetch('/api/auth/login/', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: phone, password: password })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phone: phone,
+                    password: password
+                })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Stockage des tokens (JWT) dans le LocalStorage ou Cookies
+                // Stockage des tokens JWT
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);
-                // Redirection vers le tableau de bord ou l'accueil
-                window.location.href = '/';
+
+                // Notification de succès
+                showNotification('Connexion réussie ! Redirection...', 'success');
+
+                // Récupérer le paramètre ?next= pour rediriger vers la page demandée
+                const urlParams = new URLSearchParams(window.location.search);
+                const nextUrl = urlParams.get('next') || '/'; // Par défaut vers l'accueil
+
+                // Redirection après un court délai
+                setTimeout(() => {
+                    window.location.href = nextUrl;
+                }, 1000);
+
             } else {
-                errorDiv.innerText = data.detail || "Erreur de connexion.";
-                errorDiv.classList.remove('hidden');
+                // Gestion des erreurs spécifiques
+                let errorMessage = 'Erreur de connexion.';
+
+                if (data.detail) {
+                    errorMessage = data.detail;
+                } else if (data.phone) {
+                    errorMessage = 'Numéro de téléphone invalide.';
+                } else if (data.password) {
+                    errorMessage = 'Mot de passe invalide.';
+                } else if (response.status === 401) {
+                    errorMessage = 'Identifiants incorrects.';
+                } else if (response.status === 403) {
+                    errorMessage = 'Compte désactivé. Contactez le support.';
+                }
+
+                showError(errorMessage);
+                setLoading(false);
             }
+
         } catch (error) {
-            errorDiv.innerText = "Erreur réseau.";
-            errorDiv.classList.remove('hidden');
+            console.error('Erreur réseau:', error);
+            showError('Erreur de connexion au serveur. Vérifiez votre connexion internet.');
+            setLoading(false);
         }
+    });
+
+    // ===== Helper Functions =====
+    function showError(message) {
+        errorText.textContent = message;
+        errorDiv.classList.remove('hidden');
+        // Scroll vers l'erreur
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideError() {
+        errorDiv.classList.add('hidden');
+        errorText.textContent = '';
+    }
+
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+
+        if (isLoading) {
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+        } else {
+            btnText.classList.remove('hidden');
+            btnLoader.classList.add('hidden');
+        }
+    }
+
+    // ===== Auto-focus sur le champ téléphone =====
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('phone').focus();
+    });
+
+    // ===== Formater automatiquement le numéro de téléphone (optionnel) =====
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('input', function(e) {
+        // Retirer tout sauf les chiffres
+        let value = e.target.value.replace(/\D/g, '');
+
+        // Limiter à 9 chiffres pour le Sénégal
+        if (value.length > 9) {
+            value = value.slice(0, 9);
+        }
+
+        e.target.value = value;
     });
 </script>
 {% endblock %}

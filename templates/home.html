@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}Accueil - Sénégal Contacts{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-gradient-to-br from-primary to-red-900 text-white py-20 -mx-4 mb-12">
+    <div class="container mx-auto px-4 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+            Bienvenue sur Sénégal Contacts
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-100 mb-8">
+            Trouvez le professionnel qu'il vous faut, tout de suite.
+        </p>
+
+        <!-- Barre de recherche rapide -->
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-2 flex flex-col md:flex-row gap-2">
+                <input
+                    type="text"
+                    id="searchQuery"
+                    placeholder="Quel métier recherchez-vous ?"
+                    class="flex-1 px-4 py-3 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary">
+                <button
+                    onclick="searchPros()"
+                    class="bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                    🔍 Rechercher
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Utilisateur Connecté -->
+<div id="user-dashboard" class="hidden mb-12">
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6 md:p-8 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">
+                        Bonjour, <span id="userName" class="text-secondary">...</span> 👋
+                    </h2>
+                    <p class="text-gray-600 mt-2">Gérez votre activité et vos annonces</p>
+                </div>
+                <div class="hidden md:block">
+                    <span class="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                        ✓ Compte actif
+                    </span>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <a href="/pros/me/" class="group block p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl hover:shadow-lg transition transform hover:-translate-y-1">
+                    <div class="flex items-center mb-3">
+                        <span class="text-4xl mr-3">🛠️</span>
+                        <h3 class="text-xl font-bold text-secondary group-hover:text-blue-700">Mon Profil Pro</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm">Gérez vos informations professionnelles</p>
+                </a>
+
+                <a href="/annonces/mes-annonces/" class="group block p-6 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl hover:shadow-lg transition transform hover:-translate-y-1">
+                    <div class="flex items-center mb-3">
+                        <span class="text-4xl mr-3">📢</span>
+                        <h3 class="text-xl font-bold text-green-700 group-hover:text-green-800">Mes Annonces</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm">Publiez et gérez vos offres/demandes</p>
+                </a>
+
+                <a href="/billing/subscribe/" class="group block p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200 rounded-xl hover:shadow-lg transition transform hover:-translate-y-1">
+                    <div class="flex items-center mb-3">
+                        <span class="text-4xl mr-3">💎</span>
+                        <h3 class="text-xl font-bold text-yellow-700 group-hover:text-yellow-800">Abonnement</h3>
+                    </div>
+                    <p class="text-gray-600 text-sm">Boostez votre visibilité (1000F/mois)</p>
+                </a>
+            </div>
+
+            <!-- Statistiques rapides (optionnel) -->
+            <div id="userStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-primary" id="statViews">-</p>
+                    <p class="text-sm text-gray-600">Vues de profil</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-secondary" id="statAnnonces">-</p>
+                    <p class="text-sm text-gray-600">Annonces actives</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-green-600" id="statContacts">-</p>
+                    <p class="text-sm text-gray-600">Contacts reçus</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-yellow-600" id="statRating">-</p>
+                    <p class="text-sm text-gray-600">Note moyenne</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Visiteur (Non connecté) -->
+<div id="guest-welcome" class="hidden">
+    <!-- Avantages de la plateforme -->
+    <div class="max-w-6xl mx-auto mb-12">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+            Pourquoi choisir Sénégal Contacts ?
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="text-center p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition">
+                <div class="text-5xl mb-4">🔍</div>
+                <h3 class="text-xl font-bold text-primary mb-3">Trouvez rapidement</h3>
+                <p class="text-gray-600">Des milliers de professionnels vérifiés dans tous les secteurs</p>
+            </div>
+
+            <div class="text-center p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition">
+                <div class="text-5xl mb-4">⭐</div>
+                <h3 class="text-xl font-bold text-primary mb-3">Qualité garantie</h3>
+                <p class="text-gray-600">Consultez les avis et notes des clients précédents</p>
+            </div>
+
+            <div class="text-center p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition">
+                <div class="text-5xl mb-4">📱</div>
+                <h3 class="text-xl font-bold text-primary mb-3">Contact direct</h3>
+                <p class="text-gray-600">Contactez les pros directement par téléphone ou WhatsApp</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-gradient-to-r from-secondary to-blue-600 text-white py-12 -mx-4 mb-12">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold mb-4">Prêt à démarrer ?</h2>
+            <p class="text-xl mb-8">Créez votre compte professionnel en moins de 2 minutes</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/accounts/register/" class="bg-white text-secondary px-8 py-4 rounded-full text-lg font-bold shadow-lg hover:bg-gray-100 transition transform hover:scale-105">
+                    🚀 Créer mon compte
+                </a>
+                <a href="/pros/" class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-white hover:text-secondary transition">
+                    🔍 Explorer les pros
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Métiers populaires -->
+<div class="max-w-6xl mx-auto mb-12">
+    <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+        Métiers les plus recherchés
+    </h2>
+
+    <div id="popularCategories" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <!-- Les catégories seront chargées dynamiquement -->
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">⚙️</div>
+            <p class="font-semibold text-gray-700">Mécanique</p>
+        </div>
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">💇</div>
+            <p class="font-semibold text-gray-700">Coiffure</p>
+        </div>
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">🔧</div>
+            <p class="font-semibold text-gray-700">Plomberie</p>
+        </div>
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">⚡</div>
+            <p class="font-semibold text-gray-700">Électricité</p>
+        </div>
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">🏗️</div>
+            <p class="font-semibold text-gray-700">Maçonnerie</p>
+        </div>
+        <div class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer">
+            <div class="text-4xl mb-2">👨‍🍳</div>
+            <p class="font-semibold text-gray-700">Restauration</p>
+        </div>
+    </div>
+</div>
+
+<!-- Témoignages (optionnel) -->
+<div class="bg-gray-100 -mx-4 py-12 mb-12">
+    <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+            Ils nous font confiance
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex items-center mb-4">
+                    <div class="text-yellow-500 text-xl">⭐⭐⭐⭐⭐</div>
+                </div>
+                <p class="text-gray-600 italic mb-4">"J'ai trouvé un excellent mécanicien en 5 minutes. Service rapide et efficace !"</p>
+                <p class="font-semibold text-gray-800">- Amadou D., Dakar</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex items-center mb-4">
+                    <div class="text-yellow-500 text-xl">⭐⭐⭐⭐⭐</div>
+                </div>
+                <p class="text-gray-600 italic mb-4">"Grâce à mon profil pro, j'ai doublé ma clientèle en 2 mois !"</p>
+                <p class="font-semibold text-gray-800">- Fatou S., Plombière</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <div class="flex items-center mb-4">
+                    <div class="text-yellow-500 text-xl">⭐⭐⭐⭐⭐</div>
+                </div>
+                <p class="text-gray-600 italic mb-4">"Interface simple, professionnels sérieux. Je recommande à 100% !"</p>
+                <p class="font-semibold text-gray-800">- Moussa K., Thiès</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ===== Initialisation =====
+    document.addEventListener('DOMContentLoaded', async () => {
+        const token = localStorage.getItem('access_token');
+        const userDashboard = document.getElementById('user-dashboard');
+        const guestWelcome = document.getElementById('guest-welcome');
+
+        if (token) {
+            // Utilisateur connecté
+            userDashboard.classList.remove('hidden');
+            guestWelcome.classList.add('hidden');
+
+            // Charger les informations utilisateur
+            await loadUserInfo();
+            await loadUserStats();
+        } else {
+            // Visiteur
+            userDashboard.classList.add('hidden');
+            guestWelcome.classList.remove('hidden');
+        }
+
+        // Charger les catégories populaires
+        await loadPopularCategories();
+    });
+
+    // ===== Charger les infos utilisateur =====
+    async function loadUserInfo() {
+        try {
+            const response = await apiRequest('/api/auth/me/');
+            if (response && response.ok) {
+                const user = await response.json();
+                document.getElementById('userName').textContent = user.first_name || user.phone;
+            }
+        } catch (error) {
+            console.error('Erreur chargement profil:', error);
+        }
+    }
+
+    // ===== Charger les statistiques utilisateur =====
+    async function loadUserStats() {
+        try {
+            const response = await apiRequest('/api/pros/me/stats/');
+            if (response && response.ok) {
+                const stats = await response.json();
+                document.getElementById('statViews').textContent = stats.profile_views || 0;
+                document.getElementById('statAnnonces').textContent = stats.active_annonces || 0;
+                document.getElementById('statContacts').textContent = stats.contacts_received || 0;
+                document.getElementById('statRating').textContent = stats.average_rating ? stats.average_rating.toFixed(1) : '-';
+            }
+        } catch (error) {
+            console.error('Erreur chargement stats:', error);
+        }
+    }
+
+    // ===== Charger les catégories populaires =====
+    async function loadPopularCategories() {
+        try {
+            const response = await fetch('/api/catalog/metiers/?limit=6&ordering=-pros_count');
+            if (response.ok) {
+                const data = await response.json();
+                const container = document.getElementById('popularCategories');
+
+                if (data.results && data.results.length > 0) {
+                    container.innerHTML = data.results.map(metier => `
+                        <div onclick="searchByMetier('${metier.name}')" class="text-center p-4 bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer transform hover:-translate-y-1">
+                            <div class="text-4xl mb-2">${metier.icon || '🔧'}</div>
+                            <p class="font-semibold text-gray-700">${metier.name}</p>
+                            <p class="text-xs text-gray-500 mt-1">${metier.pros_count || 0} pros</p>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Erreur chargement catégories:', error);
+        }
+    }
+
+    // ===== Recherche de professionnels =====
+    function searchPros() {
+        const query = document.getElementById('searchQuery').value.trim();
+        if (query) {
+            window.location.href = `/pros/?search=${encodeURIComponent(query)}`;
+        } else {
+            window.location.href = '/pros/';
+        }
+    }
+
+    function searchByMetier(metierName) {
+        window.location.href = `/pros/?metier=${encodeURIComponent(metierName)}`;
+    }
+
+    // Enter key pour recherche
+    document.getElementById('searchQuery')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchPros();
+        }
+    });
+</script>
+{% endblock %}

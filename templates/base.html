@@ -1,17 +1,18 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sénégal Contacts - Trouvez un pro proche de vous{% endblock %}</title>
+    <title>{% block title %}Sénégal Contacts - Trouvez un pro{% endblock %}</title>
 
-    <meta name="description" content="{% block description %}La plateforme de référence au Sénégal pour trouver les meilleurs professionnels : mécaniciens, coiffeurs, plombiers, et plus encore.{% endblock %}">
-    <meta name="keywords" content="Sénégal, Services, Emploi, Professionnels, Dakar, Touba, Thiès, Annonces">
+    <meta name="description" content="{% block description %}La plateforme de référence au Sénégal pour trouver les meilleurs professionnels.{% endblock %}">
+    <meta name="keywords" content="Sénégal, Services, Dakar, Annonces, Professionnels, Emploi">
     <meta name="author" content="ContactAfrique">
 
     <meta property="og:title" content="{% block og_title %}Sénégal Contacts{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Trouvez un expert ou publiez vos services au Sénégal.{% endblock %}">
-    <meta property="og:image" content="/static/images/logo_share.png">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo_share.png' %}">
     <meta property="og:type" content="website">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,37 +21,258 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#701705', // Rouge brique (Background spec)
-                        secondary: '#1447E6', // Bleu (Reste spec)
+                        primary: '#701705',   // Rouge brique (Votre charte)
+                        secondary: '#1447E6', // Bleu (Votre charte)
                     }
                 }
             }
         }
     </script>
+
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Toast Notification */
+        #notification-container { z-index: 9999; }
     </style>
+
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 flex flex-col min-h-screen">
 
-    <nav class="bg-primary text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="/" class="text-2xl font-bold">🇸🇳 ContactAfrique</a>
-            <div>
-                <a href="/accounts/login/" class="px-4 py-2 hover:text-gray-200">Connexion</a>
-                <a href="/accounts/register/" class="bg-white text-primary px-4 py-2 rounded font-bold hover:bg-gray-100">Inscription</a>
+    <div id="notification-container" class="fixed top-5 right-5 space-y-3"></div>
+
+    <nav class="bg-primary text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+
+                <a href="{% url 'home' %}" class="text-2xl font-bold flex items-center gap-2">
+                    <span>🇸🇳</span>
+                    <span class="hidden md:inline">ContactAfrique</span>
+                </a>
+
+                <div class="hidden md:flex items-center space-x-6 font-medium">
+                    <a href="{% url 'home' %}" class="hover:text-gray-200 transition">Accueil</a>
+                    <a href="{% url 'pros_list' %}" class="hover:text-gray-200 transition">Professionnels</a>
+                    <a href="{% url 'annonces_list' %}" class="hover:text-gray-200 transition">Annonces</a>
+
+                    <div id="nav-auth" class="hidden items-center space-x-4">
+                        <a href="{% url 'dashboard' %}" class="bg-red-800 px-3 py-1 rounded hover:bg-red-900 transition flex items-center gap-2">
+                            <span>👤 Mon Espace</span>
+                        </a>
+                        <button onclick="logout()" class="text-sm hover:underline opacity-90">Déconnexion</button>
+                    </div>
+
+                    <div id="nav-guest" class="flex items-center space-x-3">
+                        <a href="{% url 'login_page' %}" class="hover:text-gray-200">Connexion</a>
+                        <a href="{% url 'register_page' %}" class="bg-white text-primary px-4 py-2 rounded-full font-bold hover:bg-gray-100 transition shadow">
+                            Inscription
+                        </a>
+                    </div>
+                </div>
+
+                <button id="mobile-menu-btn" class="md:hidden p-2 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden bg-red-900 border-t border-red-800">
+            <div class="px-4 py-2 space-y-2">
+                <a href="{% url 'home' %}" class="block py-2 hover:bg-red-800 rounded">Accueil</a>
+                <a href="{% url 'pros_list' %}" class="block py-2 hover:bg-red-800 rounded">Professionnels</a>
+                <a href="{% url 'annonces_list' %}" class="block py-2 hover:bg-red-800 rounded">Annonces</a>
+
+                <div id="mobile-nav-auth" class="hidden border-t border-red-700 pt-2 mt-2">
+                    <a href="{% url 'dashboard' %}" class="block py-2 font-bold">Mon Tableau de bord</a>
+                    <button onclick="logout()" class="block w-full text-left py-2 text-red-200">Se déconnecter</button>
+                </div>
+
+                <div id="mobile-nav-guest" class="border-t border-red-700 pt-2 mt-2">
+                    <a href="{% url 'login_page' %}" class="block py-2">Se connecter</a>
+                    <a href="{% url 'register_page' %}" class="block py-2 font-bold text-yellow-300">Créer un compte</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow container mx-auto p-4">
+    <main class="flex-grow container mx-auto px-4 py-6 fade-in">
         {% block content %}
         {% endblock %}
     </main>
 
-    <footer class="bg-gray-800 text-white text-center p-4 mt-8">
-        <p>&copy; 2025 Sénégal Contacts - km14 Rte de Rufisque, Dakar.</p>
+    <footer class="bg-gray-900 text-gray-300 mt-12">
+        <div class="container mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+            <div>
+                <h3 class="text-white text-lg font-bold mb-4">🇸🇳 ContactAfrique</h3>
+                <p>La solution pour trouver rapidement un professionnel de confiance proche de chez vous au Sénégal.</p>
+            </div>
+            <div>
+                <h3 class="text-white text-lg font-bold mb-4">Liens Utiles</h3>
+                <ul class="space-y-2">
+                    <li><a href="{% url 'pros_list' %}" class="hover:text-white">Trouver un pro</a></li>
+                    <li><a href="{% url 'annonces_list' %}" class="hover:text-white">Petites annonces</a></li>
+                    <li><a href="{% url 'register_page' %}" class="hover:text-white">Devenir prestataire</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="text-white text-lg font-bold mb-4">Support</h3>
+                <p>Dakar, Sénégal</p>
+                <p class="mt-2"><a href="mailto:contact@contactafrique.sn" class="hover:text-white">contact@contactafrique.sn</a></p>
+            </div>
+        </div>
+        <div class="bg-black py-4 text-center text-xs text-gray-500">
+            &copy; 2025 Sénégal Contacts. Tous droits réservés.
+        </div>
     </footer>
+
+    <script>
+        // --- GESTION DE L'INTERFACE UTILISATEUR ---
+
+        // Menu Mobile
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // --- GESTION DE L'AUTHENTIFICATION (JWT) ---
+
+        // Exécuté au chargement de chaque page
+        document.addEventListener('DOMContentLoaded', () => {
+            updateAuthUI();
+        });
+
+        function updateAuthUI() {
+            const token = localStorage.getItem('access_token');
+            const navAuth = document.getElementById('nav-auth');
+            const navGuest = document.getElementById('nav-guest');
+            const mobAuth = document.getElementById('mobile-nav-auth');
+            const mobGuest = document.getElementById('mobile-nav-guest');
+
+            if (token) {
+                // Utilisateur connecté
+                navAuth.classList.remove('hidden');
+                navAuth.classList.add('flex');
+                navGuest.classList.add('hidden');
+
+                mobAuth.classList.remove('hidden');
+                mobGuest.classList.add('hidden');
+            } else {
+                // Visiteur
+                navAuth.classList.add('hidden');
+                navGuest.classList.remove('hidden');
+                navGuest.classList.add('flex');
+
+                mobAuth.classList.add('hidden');
+                mobGuest.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            showToast('Déconnexion réussie 👋', 'info');
+            setTimeout(() => {
+                window.location.href = "{% url 'home' %}";
+            }, 1000);
+        }
+
+        // --- OUTILS API (Fetch avec Refresh Token automatique) ---
+
+        async function apiRequest(url, options = {}) {
+            let token = localStorage.getItem('access_token');
+
+            // Configuration des headers par défaut
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            let config = { ...options, headers };
+
+            try {
+                let response = await fetch(url, config);
+
+                // Si le token est expiré (401 Unauthorized)
+                if (response.status === 401 && token) {
+                    console.log("Token expiré, tentative de refresh...");
+                    const refreshed = await refreshToken();
+
+                    if (refreshed) {
+                        // On réessaie la requête avec le nouveau token
+                        token = localStorage.getItem('access_token');
+                        config.headers['Authorization'] = `Bearer ${token}`;
+                        response = await fetch(url, config);
+                    } else {
+                        // Refresh impossible, on déconnecte
+                        logout();
+                        return null;
+                    }
+                }
+                return response;
+
+            } catch (error) {
+                console.error("Erreur réseau:", error);
+                showToast("Erreur de connexion serveur", 'error');
+                throw error;
+            }
+        }
+
+        async function refreshToken() {
+            const refresh = localStorage.getItem('refresh_token');
+            if (!refresh) return false;
+
+            try {
+                const res = await fetch('/api/auth/token/refresh/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh: refresh })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('access_token', data.access);
+                    return true;
+                }
+            } catch (e) {
+                console.error("Echec du refresh", e);
+            }
+            return false;
+        }
+
+        // --- SYSTEME DE NOTIFICATIONS (Toast) ---
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            const toast = document.createElement('div');
+
+            // Couleurs selon le type
+            const bgClass = type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-500' : 'bg-green-600');
+
+            toast.className = `${bgClass} text-white px-6 py-3 rounded shadow-lg transform transition-all duration-300 translate-x-full opacity-0 flex items-center`;
+            toast.innerHTML = `<span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animation d'entrée
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            // Disparition auto
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>

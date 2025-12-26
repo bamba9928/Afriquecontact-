@@ -143,25 +143,3 @@ class MeSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "phone", "email", "role", "whatsapp_verified", "date_joined"]
         read_only_fields = ["phone", "role", "whatsapp_verified", "date_joined"]
-# Ajoutez ce serializer pour les clients simples
-class RegisterClientSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=32)
-    password = serializers.CharField(write_only=True, min_length=8)
-    # Optionnel: Nom/Prénom si besoin
-
-    def validate_phone(self, value):
-        phone = User.objects.normalize_phone(value)
-        if User.objects.filter(phone=phone).exists():
-            raise serializers.ValidationError("Ce numéro est déjà inscrit.")
-        return phone
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            phone=validated_data["phone"],
-            password=validated_data["password"],
-            role=User.Role.CLIENT
-        )
-        # Génération OTP identique au Pro
-        code = str(random.randint(100000, 999999)) if not settings.DEBUG else "123456"
-        WhatsAppOTP.create_otp(phone=user.phone, code=code)
-        return user

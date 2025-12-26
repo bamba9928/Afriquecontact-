@@ -1,5 +1,4 @@
 from pathlib import Path
-from datetime import timedelta
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,11 +33,10 @@ INSTALLED_APPS = [
     # Local apps
     "accounts",
     "catalog",
-    'pros',
+    "pros",
     "billing",
     "moderation",
     'annonces',
-    'marketing',
 ]
 
 MIDDLEWARE = [
@@ -57,11 +55,10 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -98,26 +95,13 @@ REST_FRAMEWORK = {
         "PAGE_SIZE": env.int("API_PAGE_SIZE", default=20),
 }
 
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
-}
-
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Sencontact API",
+    "TITLE": "ContactAfrique API",
     "VERSION": "0.1.0",
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:3000", "http://127.0.0.1:3000"])
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -140,28 +124,3 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 AUTH_USER_MODEL = "accounts.User"
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {message}",
-            "style": "{",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs" / "sencontact.log",
-            "formatter": "verbose",
-        },
-    },
-    "root": {
-        "handlers": ["console", "file"],
-        "level": "INFO" if not DEBUG else "DEBUG",
-    },
-}

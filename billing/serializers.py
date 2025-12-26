@@ -20,21 +20,15 @@ class CheckoutSerializer(serializers.Serializer):
         return value
 
 
-
 class SubscriptionMeSerializer(serializers.ModelSerializer):
     """
     Serializer pour l'état de l'abonnement (utilisé par SubscriptionMeView).
     """
     is_active = serializers.BooleanField(source="is_active", read_only=True)
-
-class SubscriptionMeSerializer(serializers.ModelSerializer):
-    is_active = serializers.SerializerMethodField()
-
     days_left = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
-
         fields = [
             "status",
             "start_at",
@@ -52,16 +46,6 @@ class SubscriptionMeSerializer(serializers.ModelSerializer):
             return max(0, delta.days)
         return 0
 
-        fields = ["status", "start_at", "end_at", "is_active", "days_left", "last_payment"]
-
-    def get_is_active(self, obj):
-        return obj.is_active()
-
-    def get_days_left(self, obj):
-        if obj.is_active() and obj.end_at:
-            delta = obj.end_at - timezone.now()
-            return max(0, delta.days)
-        return 0
 
 class PaymentSerializer(serializers.ModelSerializer):
     """

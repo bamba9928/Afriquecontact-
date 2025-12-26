@@ -1,4 +1,3 @@
-
 echo .env>> .gitignore
 echo .venv>> .gitignore
 echo __pycache__/>> .gitignore
@@ -12,62 +11,18 @@ __pycache__/
 .env.*
 *.pem
 
+# Django media/static build
+media/
+staticfiles/
+
 # Virtualenv
 .venv/
 venv/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-*.manifest
-*.spec
-
-# Environnements virtuels
-.venv/
-venv/
-ENV/
-env/
-
-# Configuration & secrets
-.env
-.env.*
-*.pem
-*.key
-*.crt
-
-# Base de données
-*.sqlite3
-*.db
-
-# Logs
-*.log
-
-# Django
-*.pyc
-media/
-staticfiles/
-*.mo
 # IDE
 .idea/
 .vscode/
 
-*.swp
-*.swo
-*~
-
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
-.idea/
-.venv/
-__pycache__/
-*.pyc
-.env
-

@@ -1,7 +1,15 @@
 from __future__ import annotations
 
-from django.db.models import F, FloatField, Value, ExpressionWrapper, Prefetch
-from django.db.models.functions import Radians, Sin, Cos, ACos
+from django.db.models import (
+    F,
+    FloatField,
+    Value,
+    ExpressionWrapper,
+    Prefetch,
+    OuterRef,
+    Exists,
+)
+from django.db.models.functions import Radians, Sin, Cos, ACos, Greatest, Least
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,7 +21,12 @@ from rest_framework.pagination import PageNumberPagination
 
 from billing.models import Subscription
 from .models import ProfilProfessionnel, ContactFavori, MediaPro
-from .serializers import ProMeSerializer, ProPublicSerializer, ContactFavoriSerializer, MediaProSerializer
+from .serializers import (
+    ProMeSerializer,
+    ProPublicSerializer,
+    ContactFavoriSerializer,
+    MediaProSerializer,
+)
 from .permissions import EstProfessionnel, EstAdministrateur
 
 
@@ -30,7 +43,9 @@ class PaginationRecherchePro(PageNumberPagination):
 class RechercheProView(generics.ListAPIView):
     """
     Vue de recherche optimisée pour le mobile.
-    Supporte le tri par distance, les filtres métiers et zones.
+    - Filtre uniquement les profils publiés ET avec abonnement actif (cahier des charges)
+    - Annote has_active_subscription (évite N+1)
+    - Tri distance (si lat/lng fournis)
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = ProPublicSerializer
@@ -43,15 +58,31 @@ class RechercheProView(generics.ListAPIView):
     ordering = ["-mis_a_jour_le"]
 
     def get_queryset(self):
-        # Optimisation SQL : On pré-charge les abonnements actifs pour le masquage des numéros
-        active_subs = Subscription.objects.filter(status=Subscription.Status.ACTIVE, end_at__gt=now())
+        now_dt = now()
 
-        qs = ProfilProfessionnel.objects.select_related(
-            "utilisateur", "metier", "zone_geographique"
-        ).prefetch_related(
-            Prefetch('utilisateur__subscriptions', queryset=active_subs, to_attr='active_sub'),
-            'media'
-        ).filter(est_publie=True)
+        # ✅ Bool SQL : abonnement actif (évite N+1 et évite le prefetch mal exploité)
+        active_sub_q = Subscription.objects.filter(
+            user_id=OuterRef("utilisateur_id"),
+            status=Subscription.Status.ACTIVE,
+            end_at__gt=now_dt,
+        )
+
+        qs = (
+            ProfilProfessionnel.objects
+            .select_related("utilisateur", "metier", "zone_geographique")
+            .annotate(has_active_subscription=Exists(active_sub_q))
+            # ✅ Les pros non payés ne doivent pas apparaître
+            .filter(est_publie=True, has_active_subscription=True)
+            # ✅ Préfetch media (utile si serializer utilise cache / ou si vous l’adaptez)
+            .prefetch_related(
+                Prefetch(
+                    "media",
+                    queryset=MediaPro.objects.filter(type_media=MediaPro.TypeMedia.PHOTO).only(
+                        "id", "professionnel_id", "type_media", "est_principal", "fichier", "cree_le"
+                    ),
+                )
+            )
+        )
 
         lat = self.request.query_params.get("lat")
         lng = self.request.query_params.get("lng")
@@ -63,25 +94,37 @@ class RechercheProView(generics.ListAPIView):
                 lat_f = float(lat)
                 lng_f = float(lng)
 
+                # garde-fous simples
+                if not (-90 <= lat_f <= 90 and -180 <= lng_f <= 180):
+                    return qs
+
                 qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
-                # Formule Haversine pour la distance
+                # Formule (spherical law of cosines) + clamp [-1, 1] pour éviter erreurs d’arrondi
+                cos_val = (
+                    Cos(Radians(Value(lat_f))) * Cos(Radians(F("latitude"))) *
+                    Cos(Radians(F("longitude")) - Radians(Value(lng_f))) +
+                    Sin(Radians(Value(lat_f))) * Sin(Radians(F("latitude")))
+                )
+                cos_val_clamped = Least(Value(1.0), Greatest(Value(-1.0), cos_val))
+
                 distance_expr = ExpressionWrapper(
-                    Value(6371.0) * ACos(
-                        Cos(Radians(Value(lat_f))) * Cos(Radians(F("latitude"))) *
-                        Cos(Radians(F("longitude")) - Radians(Value(lng_f))) +
-                        Sin(Radians(Value(lat_f))) * Sin(Radians(F("latitude")))
-                    ),
+                    Value(6371.0) * ACos(cos_val_clamped),
                     output_field=FloatField(),
                 )
 
                 qs = qs.annotate(distance_km=distance_expr)
 
                 if rayon_km:
-                    qs = qs.filter(distance_km__lte=float(rayon_km))
+                    try:
+                        r = float(rayon_km)
+                        if r > 0:
+                            qs = qs.filter(distance_km__lte=r)
+                    except (ValueError, TypeError):
+                        pass
 
                 if tri == "distance":
-                    qs = qs.order_by("distance_km")
+                    qs = qs.order_by("distance_km", "-mis_a_jour_le")
 
             except (ValueError, TypeError):
                 pass
@@ -96,59 +139,63 @@ class MonProfilProView(generics.RetrieveUpdateAPIView):
     serializer_class = ProMeSerializer
 
     def get_object(self):
-        return self.request.user.pro_profile
+        return get_object_or_404(ProfilProfessionnel, utilisateur=self.request.user)
 
 
 class PublicationProView(APIView):
     """
-    Action pour rendre le profil visible publiquement.
-    Vérifie l'abonnement actif (1000F/mois) via le modèle Subscription.
+    Publie le profil si:
+    - WhatsApp vérifié
+    - abonnement actif
+    - profil complet
     """
     permission_classes = [permissions.IsAuthenticated, EstProfessionnel]
 
     def _abonnement_actif(self, user) -> bool:
-        # Vérification réelle basée sur le modèle Subscription [cite: 394, 412]
         return Subscription.objects.filter(
             user=user,
             status=Subscription.Status.ACTIVE,
-            end_at__gt=now()
+            end_at__gt=now(),
         ).exists()
 
     def post(self, request):
-        pro = request.user.pro_profile
+        pro = get_object_or_404(ProfilProfessionnel, utilisateur=request.user)
 
         if not request.user.whatsapp_verified:
             return Response(
                 {"detail": "Vérifiez votre WhatsApp avant de publier."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Vérification de l'abonnement à 1000F/Mois [cite: 268, 269]
         if not self._abonnement_actif(request.user):
             return Response(
                 {"detail": "Abonnement inactif. Veuillez régler 1000F/mois pour être visible."},
-                status=status.HTTP_402_PAYMENT_REQUIRED
+                status=status.HTTP_402_PAYMENT_REQUIRED,
             )
 
         champs_obligatoires = [
-            pro.nom_entreprise, pro.telephone_appel,
-            pro.telephone_whatsapp, pro.metier, pro.zone_geographique
+            pro.nom_entreprise,
+            pro.telephone_appel,
+            pro.telephone_whatsapp,
+            pro.metier_id,
+            pro.zone_geographique_id,
         ]
         if not all(champs_obligatoires):
             return Response(
                 {"detail": "Profil incomplet pour publication."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         pro.est_publie = True
         pro.save(update_fields=["est_publie"])
         return Response({"detail": "Votre profil est désormais visible."})
 
+
 class RetraitPublicationProView(APIView):
     permission_classes = [permissions.IsAuthenticated, EstProfessionnel]
 
     def post(self, request):
-        pro = request.user.pro_profile
+        pro = get_object_or_404(ProfilProfessionnel, utilisateur=request.user)
         pro.est_publie = False
         pro.save(update_fields=["est_publie"])
         return Response({"detail": "Profil masqué avec succès."})
@@ -160,26 +207,20 @@ class AdminPublicationProView(APIView):
     permission_classes = [permissions.IsAuthenticated, EstAdministrateur]
 
     def post(self, request, pro_id: int):
-        try:
-            pro = ProfilProfessionnel.objects.get(pk=pro_id)
-            pro.est_publie = True
-            pro.save(update_fields=["est_publie"])
-            return Response({"detail": "Profil publié par l'administrateur."})
-        except ProfilProfessionnel.DoesNotExist:
-            return Response({"detail": "Profil introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        pro = get_object_or_404(ProfilProfessionnel, pk=pro_id)
+        pro.est_publie = True
+        pro.save(update_fields=["est_publie"])
+        return Response({"detail": "Profil publié par l'administrateur."})
 
 
 class AdminRetraitPublicationProView(APIView):
     permission_classes = [permissions.IsAuthenticated, EstAdministrateur]
 
     def post(self, request, pro_id: int):
-        try:
-            pro = ProfilProfessionnel.objects.get(pk=pro_id)
-            pro.est_publie = False
-            pro.save(update_fields=["est_publie"])
-            return Response({"detail": "Profil dépublié par l'administrateur."},)
-        except ProfilProfessionnel.DoesNotExist:
-            return Response({"detail": "Profil introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        pro = get_object_or_404(ProfilProfessionnel, pk=pro_id)
+        pro.est_publie = False
+        pro.save(update_fields=["est_publie"])
+        return Response({"detail": "Profil dépublié par l'administrateur."})
 
 
 class MediaProCreateView(generics.CreateAPIView):
@@ -193,13 +234,17 @@ class MediaProCreateView(generics.CreateAPIView):
 class ContactFavoriView(generics.ListCreateAPIView):
     """
     Endpoint: /api/pro/favoris/
-    - Optimisé avec select_related pour éviter N+1
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ContactFavoriSerializer
 
     def get_queryset(self):
-        # ✅ Optimisation: on joint le professionnel et ses détails
+        if getattr(self, "swagger_fake_view", False):
+            return ContactFavori.objects.none()
+
+        if not self.request.user.is_authenticated:
+            return ContactFavori.objects.none()
+
         return (
             ContactFavori.objects
             .select_related(
@@ -208,19 +253,18 @@ class ContactFavoriView(generics.ListCreateAPIView):
                 "professionnel__metier",
                 "professionnel__zone_geographique",
             )
+            .prefetch_related("professionnel__media")
             .filter(proprietaire=self.request.user)
             .order_by("-id")
         )
 
     def perform_create(self, serializer):
-        # Optionnel: éviter doublons si contrainte unique pas encore en place
         serializer.save(proprietaire=self.request.user)
 
 
 class ContactFavoriDestroyView(generics.DestroyAPIView):
     """
-    Endpoint (exemple): DELETE /api/pro/favoris/<int:professionnel_id>/
-    Supprime un favori du user connecté.
+    DELETE /api/pro/favoris/<int:professionnel_id>/
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ContactFavoriSerializer

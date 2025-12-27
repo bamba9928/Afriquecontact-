@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "billing",
     "moderation",
     'annonces',
+    'ads',
 ]
 
 MIDDLEWARE = [

@@ -29,6 +29,7 @@ urlpatterns = [
     path("api/billing/", include("billing.urls")),
 
     # Annonces (Offres et Demandes d'emploi)
+    path("api/ads/", include("ads.urls")),
     # Accessible via /api/annonces/
     path("api/annonces/", include("annonces.urls")),
 

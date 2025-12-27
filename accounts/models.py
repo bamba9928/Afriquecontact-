@@ -7,12 +7,20 @@ from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
+    import re
+
     def normalize_phone(self, phone: str) -> str:
-        # Nettoyage strict du téléphone pour le Sénégal (+221, espaces, etc.)
-        phone = str(phone).strip().replace(" ", "").replace("-", "")
+        phone = str(phone).strip()
+        phone = phone.replace(" ", "").replace("-", "")
         if phone.startswith("00"):
             phone = "+" + phone[2:]
+        phone = re.sub(r"[^\d+]", "", phone)
         return phone
+
+    def save(self, *args, **kwargs):
+        if self.phone:
+            self.phone = User.objects.normalize_phone(self.phone)
+        super().save(*args, **kwargs)
 
     def create_user(self, phone: str, password=None, **extra_fields):
         if not phone:
@@ -32,6 +40,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("role", "ADMIN")
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
         return self.create_user(phone, password, **extra_fields)
 
 
@@ -89,6 +103,16 @@ class WhatsAppOTP(models.Model):
             models.Index(fields=["phone", "expires_at"]),
         ]
 
+    @classmethod
+    def create_otp(cls, phone: str, code: str, ttl_minutes: int = 5) -> "WhatsAppOTP":
+        phone = User.objects.normalize_phone(phone)  # important
+        expires_at = timezone.now() + timedelta(minutes=ttl_minutes)
+        otp, _ = cls.objects.update_or_create(
+            phone=phone,
+            defaults={"code": code, "expires_at": expires_at, "attempts": 0, "locked_until": None},
+        )
+        return otp
+
     def is_valid(self) -> bool:
         now = timezone.now()
         return not self.is_expired() and not self.is_locked()
@@ -100,16 +124,16 @@ class WhatsAppOTP(models.Model):
         return bool(self.locked_until and timezone.now() < self.locked_until)
 
     def check_code(self, input_code: str) -> bool:
-        """Vérifie le code et gère le verrouillage en cas d'erreur."""
         if self.is_locked() or self.is_expired():
             return False
 
         if self.code == input_code:
+            # option A: supprimer
+            self.delete()
             return True
 
         self.attempts += 1
         if self.attempts >= self.max_attempts:
-            # Verrouille le numéro pendant 15 minutes après 3 échecs
             self.locked_until = timezone.now() + timedelta(minutes=15)
-        self.save()
+        self.save(update_fields=["attempts", "locked_until"])
         return False

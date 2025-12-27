@@ -24,7 +24,7 @@ class SubscriptionMeSerializer(serializers.ModelSerializer):
     """
     Serializer pour l'état de l'abonnement (utilisé par SubscriptionMeView).
     """
-    is_active = serializers.BooleanField(source="is_active", read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     days_left = serializers.SerializerMethodField()
 
     class Meta:

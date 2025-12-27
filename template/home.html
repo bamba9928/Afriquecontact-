@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-green-600 py-20">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+        <h1 class="text-4xl font-extrabold text-white mb-6">Trouvez le bon professionnel, tout de suite.</h1>
+
+        <form action="/pros/recherche/" method="GET" class="bg-white p-2 rounded-lg shadow-lg flex flex-col md:flex-row gap-2">
+            <input type="text" name="q" placeholder="Que cherchez-vous ? (ex: Plombier)" class="flex-grow p-3 rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select name="zone" class="p-3 rounded-md border border-gray-200 bg-white">
+                <option value="">Tout le Sénégal</option>
+                <option value="dakar">Dakar</option>
+                <option value="thies">Thiès</option>
+                </select>
+            <button type="submit" class="bg-gray-900 text-white px-8 py-3 rounded-md font-bold hover:bg-gray-800 transition">
+                Rechercher
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Les plus demandés au quotidien</h2>
+    <div class="flex flex-wrap gap-3">
+        {% for job in featured_jobs %}
+            <a href="/pros/recherche/?job={{ job.slug }}" class="bg-white border border-gray-200 px-4 py-2 rounded-full text-sm hover:bg-green-50 hover:border-green-500 transition shadow-sm">
+                {{ job.name }}
+            </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if pubs %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="overflow-x-auto flex space-x-4 pb-4">
+        {% for pub in pubs %}
+            <div class="min-w-[300px] bg-white rounded-lg shadow-md overflow-hidden relative group">
+                {% if pub.fichier %}
+                    <img src="{{ pub.fichier.url }}" alt="{{ pub.titre }}" class="w-full h-40 object-cover">
+                {% endif %}
+                <div class="p-4">
+                    <h3 class="font-bold text-lg">{{ pub.titre }}</h3>
+                    <div class="mt-2 flex gap-2">
+                         <a href="tel:{{ pub.telephone_appel }}" class="bg-blue-500 text-white px-3 py-1 rounded text-sm"><i class="fas fa-phone"></i></a>
+                         <a href="https://wa.me/{{ pub.telephone_whatsapp }}" class="bg-green-500 text-white px-3 py-1 rounded text-sm"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="bg-gray-100 py-12">
+    <div class="max-w-7xl mx-auto px-4">
+        <h2 class="text-2xl font-bold mb-8">Parcourir par secteur</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {% for cat in categories %}
+                <a href="/categories/{{ cat.slug }}/" class="bg-white p-6 rounded-xl shadow hover:shadow-md transition text-center">
+                    <div class="text-3xl text-green-600 mb-3">
+                        <i class="fas fa-briefcase"></i> </div>
+                    <h3 class="font-semibold">{{ cat.name }}</h3>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

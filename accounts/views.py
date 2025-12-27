@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import random
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
-from django.utils import timezone
+
 
 from .models import User, WhatsAppOTP
 from .serializers import (
@@ -46,11 +45,16 @@ class VerifyWhatsappView(views.APIView):
         serializer.is_valid(raise_exception=True)
 
         # La logique de validation est encapsulée dans le serializer
-        user = serializer.save()
+        result = serializer.save()
+        user = result["user"]
 
         return Response({
             "detail": "Votre compte WhatsApp a été vérifié avec succès.",
-            "whatsapp_verified": user.whatsapp_verified
+            "user_id": user.id,
+            "phone": user.phone,
+            "whatsapp_verified": user.whatsapp_verified,
+            "access": result["access"],
+            "refresh": result["refresh"],
         }, status=status.HTTP_200_OK)
 
 
@@ -65,11 +69,12 @@ class ResendOTPView(views.APIView):
         serializer.is_valid(raise_exception=True)
 
         # Logique d'envoi (via service externe) appelée ici
-        phone = serializer.validated_data['phone']
-        # dummy_send_whatsapp(phone, new_code)
+        otp = serializer.save()
+        # dummy_send_whatsapp(otp.phone, otp.code)
 
         return Response({
-            "detail": "Un nouveau code a été envoyé."
+            "detail": "Un nouveau code a été envoyé.",
+            "expires_at": otp.expires_at,
         }, status=status.HTTP_200_OK)
 
 

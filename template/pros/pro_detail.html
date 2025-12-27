@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pro.nom_entreprise }} - {{ pro.metier.name }} à {{ pro.zone_geographique.name }}{% endblock %}
+
+{% block meta_desc %}Contactez {{ pro.nom_entreprise }} pour vos besoins en {{ pro.metier.name }}. Disponible à {{ pro.zone_geographique.name }}. Voir photos, avis et contacts.{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+        <div class="h-32 bg-green-600"></div> <div class="px-8 pb-8 relative">
+            <div class="flex flex-col md:flex-row items-center md:items-end -mt-12 mb-6">
+                {% if pro.avatar %}
+                    <img src="{{ pro.avatar.url }}" alt="{{ pro.nom_entreprise }}" class="w-24 h-24 rounded-full border-4 border-white shadow-md bg-white">
+                {% else %}
+                    <div class="w-24 h-24 rounded-full border-4 border-white shadow-md bg-gray-200 flex items-center justify-center text-2xl font-bold text-gray-500">
+                        {{ pro.nom_entreprise|slice:":1" }}
+                    </div>
+                {% endif %}
+
+                <div class="mt-4 md:mt-0 md:ml-6 text-center md:text-left flex-grow">
+                    <h1 class="text-3xl font-bold text-gray-900">{{ pro.nom_entreprise }}</h1>
+                    <p class="text-green-700 font-medium">{{ pro.metier.name }} &bull; {{ pro.zone_geographique.name }}</p>
+                </div>
+
+                <div class="mt-4 md:mt-0 flex space-x-3">
+                    {% if pro.est_publie %}
+                        <a href="tel:{{ pro.telephone_appel }}" class="bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-blue-700 transition flex items-center gap-2">
+                            <i class="fas fa-phone"></i> Appeler
+                        </a>
+                        <a href="https://wa.me/{{ pro.telephone_whatsapp }}?text={{ message_whatsapp|urlencode }}" class="bg-green-500 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-green-600 transition flex items-center gap-2">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </a>
+                    {% else %}
+                        <button disabled class="bg-gray-300 text-gray-500 px-6 py-2 rounded-full font-bold cursor-not-allowed">
+                            Non disponible
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="prose max-w-none text-gray-600">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">À propos</h3>
+                <p>{{ pro.description|default:"Aucune description fournie."|linebreaks }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if gallery %}
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-4">Réalisations</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for media in gallery %}
+                {% if media.type_media == 'PHOTO' %}
+                    <img src="{{ media.fichier.url }}" class="rounded-lg shadow h-48 w-full object-cover hover:scale-105 transition duration-300">
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

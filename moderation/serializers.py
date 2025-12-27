@@ -43,7 +43,7 @@ class SignalementSerializer(serializers.ModelSerializer):
     telephone_auteur = serializers.CharField(source="auteur.phone", read_only=True)
     nom_pro = serializers.CharField(source="professionnel.nom_entreprise", read_only=True)
     metier_pro = serializers.CharField(source="professionnel.metier.name", read_only=True)
-    nom_admin = serializers.CharField(source="traite_par.get_full_name", read_only=True)
+    nom_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = Signalement
@@ -53,6 +53,12 @@ class SignalementSerializer(serializers.ModelSerializer):
             "traite_par", "nom_admin", "cree_le", "traite_le"
         ]
         read_only_fields = ["id", "auteur", "traite_par", "cree_le", "traite_le"]
+
+    def get_nom_admin(self, obj):
+        if obj.traite_par:
+            # Retourne le nom si dispo, sinon le téléphone, sinon "Admin"
+            return getattr(obj.traite_par, 'phone', "Admin")
+        return "-"
 
 
 class SignalementStatusUpdateSerializer(serializers.ModelSerializer):

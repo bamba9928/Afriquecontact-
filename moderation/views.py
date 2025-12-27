@@ -65,23 +65,32 @@ class AdminSignalementsListView(generics.ListAPIView):
 class AdminSignalementStatusUpdateView(generics.UpdateAPIView):
     """
     Traitement des signalements par l'administrateur (E2/E3).
-    Enregistre qui a traité le signalement et à quel moment.
+    AUTOMATISATION : Si Résolu (Sanctionné) -> Le pro est coupé.
     """
     permission_classes = [permissions.IsAuthenticated, EstAdministrateur]
     serializer_class = SignalementStatusUpdateSerializer
     queryset = Signalement.objects.all()
 
     def perform_update(self, serializer):
-        # On sauvegarde les changements (statut et note_admin)
+        # 1. Sauvegarde du signalement
         signalement = serializer.save()
 
-        # Si le statut change vers un état traité, on marque l'admin et la date
+        # 2. Gestion de l'audit (Qui et Quand)
         if signalement.statut != Signalement.Statut.OUVERT:
             signalement.traite_par = self.request.user
             signalement.traite_le = timezone.now()
         else:
-            # Réinitialisation si l'admin décide de remettre le dossier en "Ouvert"
             signalement.traite_par = None
             signalement.traite_le = None
 
-        signalement.save(update_fields=["traite_par", "traite_le"])
+        # 3. --- LOGIQUE DE SANCTION AUTOMATIQUE ---
+
+        if signalement.statut == Signalement.Statut.RESOLU:
+            pro = signalement.professionnel
+            if pro.est_publie:
+                pro.est_publie = False
+                pro.save(update_fields=["est_publie"])
+                # On ajoute une note automatique dans le signalement pour trace
+                signalement.note_admin += f"\n[SYSTÈME] : Profil pro désactivé automatiquement le {timezone.now().strftime('%d/%m/%Y')}."
+
+        signalement.save()

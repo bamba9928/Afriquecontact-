@@ -1,5 +1,3 @@
-# pros/serializers.py
-
 from __future__ import annotations
 
 import os
@@ -9,7 +7,6 @@ from typing import Optional
 from django.db import transaction
 from rest_framework import serializers
 
-from billing.models import Subscription
 from pros.models import ProfilProfessionnel, ContactFavori, MediaPro
 from catalog.serializers import JobSerializer, LocationSerializer
 
@@ -55,7 +52,7 @@ class MediaProSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """
-        Option recommandée : est_principal uniquement pour les photos (image de couverture).
+        Règle: est_principal uniquement pour les photos (image de couverture).
         """
         type_media = (attrs.get("type_media") or getattr(self.instance, "type_media", None) or "").upper()
         est_principal = attrs.get("est_principal", getattr(self.instance, "est_principal", False))
@@ -95,9 +92,7 @@ class MediaProSerializer(serializers.ModelSerializer):
             content_type = guessed
 
         if content_type and content_type not in rules["content_types"]:
-            raise serializers.ValidationError(
-                f"Type de fichier '{content_type}' non autorisé pour {media_type}."
-            )
+            raise serializers.ValidationError(f"Type de fichier '{content_type}' non autorisé pour {media_type}.")
 
         return value
 
@@ -182,7 +177,8 @@ class ProMeSerializer(serializers.ModelSerializer):
 
 class ProPublicSerializer(serializers.ModelSerializer):
     """
-    Public: téléphones masqués si abonnement inactif + is_contactable.
+    Public: téléphones masqués si paiement non à jour (est_publie=False).
+    Exception: le pro voit toujours ses propres numéros.
     """
     telephone_appel = serializers.SerializerMethodField()
     telephone_whatsapp = serializers.SerializerMethodField()
@@ -213,32 +209,25 @@ class ProPublicSerializer(serializers.ModelSerializer):
             "note_moyenne",
         ]
 
-    def _has_active_subscription(self, obj) -> bool:
-        annotated = getattr(obj, "has_active_subscription", None)
-        if annotated is not None:
-            return bool(annotated)
+    def _is_owner(self, obj) -> bool:
+        req = self.context.get("request")
+        user = getattr(req, "user", None)
+        return bool(req and user and getattr(user, "is_authenticated", False) and user == obj.utilisateur)
 
-        if hasattr(obj, "active_sub"):
-            val = getattr(obj, "active_sub")
-            try:
-                return bool(len(val))
-            except TypeError:
-                return bool(val)
-
-        # fallback (éviter si liste -> N+1)
-        return Subscription.objects.filter(
-            user=obj.utilisateur,
-            status=Subscription.Status.ACTIVE,
-        ).exists()
+    def _can_show_contacts(self, obj) -> bool:
+        # Règle business: est_publie=False => paiement non à jour => contacts masqués
+        return self._is_owner(obj) or bool(getattr(obj, "est_publie", False))
 
     def get_is_contactable(self, obj) -> bool:
-        return self._has_active_subscription(obj)
+        # True si cette réponse doit exposer les contacts (owner ou est_publie=True)
+        return self._can_show_contacts(obj)
 
     def get_telephone_appel(self, obj) -> Optional[str]:
-        return obj.telephone_appel if self._has_active_subscription(obj) else None
+        return obj.telephone_appel if self._can_show_contacts(obj) else None
 
     def get_telephone_whatsapp(self, obj) -> Optional[str]:
-        return obj.telephone_whatsapp if self._has_active_subscription(obj) else None
+        # None => le bouton WhatsApp ne s'affiche pas côté UI
+        return obj.telephone_whatsapp if self._can_show_contacts(obj) else None
 
     def get_photo_couverture(self, obj) -> Optional[str]:
         pre = getattr(obj, "photo_couverture_url", None)

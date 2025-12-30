@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/store/auth"; // Vérifiez le chemin
+import { useAuth } from "@/lib/store/auth";
 import { LogOut, User, ImageIcon, Activity, Loader2 } from "lucide-react";
 
 export default function DashboardPage() {

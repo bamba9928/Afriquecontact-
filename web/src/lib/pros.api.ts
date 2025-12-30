@@ -1,34 +1,59 @@
 "use client";
 
 import { api } from "./api";
-import type { ProPublic, PaginatedResponse } from "./types"; // Assurez-vous d'importer PaginatedResponse
-import { unwrapList } from "./paginate";
+import type { ProPublic, Paginated } from "./types";
 
-// Paramètres exacts attendus par RechercheProView
+// Favoris item (si tu ne l’as pas déjà dans types.ts)
+export type FavoriItem = {
+  id: number;
+  professionnel: number;
+  professionnel_details: ProPublic;
+  cree_le: string;
+};
+
 export type ProsSearchParams = {
-  metier?: number;            // ID du métier
-  zone_geographique?: number; // ID de la zone
-  search?: string;            // Recherche textuelle (nom ou description)
+  metier?: number;
+  zone_geographique?: number;
+  search?: string;
   statut_en_ligne?: "ONLINE" | "OFFLINE";
   lat?: number;
   lng?: number;
   radius_km?: number;
-  sort?: "distance";          // Active le tri par distance
+  sort?: "distance";
   page?: number;
   page_size?: number;
 };
 
-export async function rechercherPros(params: ProsSearchParams): Promise<PaginatedResponse<ProPublic>> {
-  // Appel vers RechercheProView
-  const { data } = await api.get<PaginatedResponse<ProPublic>>("/api/pros/recherche/", { params });
-  return data;
+// ✅ Recherche : Conforme à RechercheProView
+export async function rechercherPros(params: ProsSearchParams): Promise<Paginated<ProPublic>> {
+  const { data } = await api.get("/api/pros/recherche/", { params });
+
+  // DRF pagination => {count,next,previous,results}
+  if (Array.isArray(data)) {
+    return { results: data, count: data.length, next: null, previous: null };
+  }
+  return data as Paginated<ProPublic>;
 }
 
+// --- FAVORIS ---
+// GET supporte pagination (si activée côté DRF). On la passe en params.
 
-export async function forYouPros(): Promise<ProPublic[]> {
-  // On récupère les 10 derniers profils mis à jour (tri par défaut du backend)
-  const { data } = await api.get<PaginatedResponse<ProPublic>>("/api/pros/recherche/", {
-    params: { page_size: 10 }
-  });
-  return unwrapList(data);
+export async function listFavoris(params?: { page?: number; page_size?: number }): Promise<Paginated<FavoriItem>> {
+  const { data } = await api.get("/api/pros/favoris/", { params });
+
+  if (Array.isArray(data)) {
+    return { results: data, count: data.length, next: null, previous: null };
+  }
+  return data as Paginated<FavoriItem>;
+}
+
+export async function addFavori(proId: number) {
+  // Serializer attend le champ "professionnel" (FK)
+  const { data } = await api.post("/api/pros/favoris/", { professionnel: proId });
+  return data as FavoriItem;
+}
+
+export async function removeFavori(proId: number) {
+  // URL: /favoris/<int:professionnel_id>/
+  await api.delete(`/api/pros/favoris/${proId}/`);
 }

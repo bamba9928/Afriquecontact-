@@ -4,28 +4,30 @@ import Link from "next/link";
 import { Phone, MapPin, Briefcase, Heart, MessageCircle, Star, ShieldCheck } from "lucide-react";
 import type { ProPublic } from "@/lib/types";
 
-// Fonction utilitaire pour le masquage (inchangée, elle est bien)
-function maskPhone(p?: string) {
+// Fonction utilitaire pour le masquage
+function maskPhone(p?: string | null) {
   if (!p) return "Non renseigné";
   const digits = p.replace(/\D/g, "");
   if (digits.length <= 4) return "****";
   return digits.slice(0, 2) + "******" + digits.slice(-2);
 }
 
-// Props étendues pour gérer l'état favori visuel
 interface ProCardProps {
   pro: ProPublic;
-  isFavorite?: boolean; // Pour savoir si le cœur est plein ou vide
+  isFavorite?: boolean;
   onToggleFavori?: (id: number) => void;
 }
 
 export default function ProCard({ pro, isFavorite = false, onToggleFavori }: ProCardProps) {
-  const isPremium = !!pro.is_premium;
+  // CORRECTION 1 : Utilisation de 'is_contactable' qui vient du backend (paiement OK)
+  // au lieu de deviner 'is_premium'.
+  const isPremium = pro.is_contactable;
 
-  // On crée un lien vers le détail (slug ou id)
-  const detailHref = pro.job?.slug
-    ? `/pro/${pro.job.slug}/${pro.id}`
-    : `/pro/view/${pro.id}`;
+  // CORRECTION 2 : Utilisation directe du slug racine
+  const detailHref = `/pro/${pro.slug}`;
+
+  // CORRECTION 3 : Fallback pour l'image (avatar ou placeholder)
+  const displayImage = pro.avatar || pro.photo_couverture;
 
   return (
     <article className={`group relative flex flex-col gap-4 rounded-2xl border p-4 transition-all hover:border-white/20 ${
@@ -40,11 +42,11 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
         {/* Photo ou Initiale */}
         <Link href={detailHref} className="shrink-0">
           <div className="h-16 w-16 overflow-hidden rounded-xl bg-zinc-800 border border-white/10">
-            {pro.photo_url ? (
+            {displayImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={pro.photo_url}
-                alt={pro.nom_commercial || "Pro"}
+                src={displayImage}
+                alt={pro.nom_entreprise || "Pro"}
                 className="h-full w-full object-cover transition-transform group-hover:scale-105"
               />
             ) : (
@@ -60,23 +62,24 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
           <div className="flex items-start justify-between gap-2">
             <div>
               <Link href={detailHref} className="block truncate font-semibold text-lg text-white hover:underline decoration-white/30 underline-offset-4">
-                {pro.nom_commercial ?? pro.full_name ?? `Pro #${pro.id}`}
+                {/* CORRECTION 4 : 'nom_entreprise' (backend) au lieu de 'nom_commercial' */}
+                {pro.nom_entreprise || `Pro #${pro.id}`}
               </Link>
 
-              {/* Badge Premium ou Vérifié */}
+              {/* Badge Premium */}
               {isPremium && (
                 <div className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-400">
                   <Star size={12} className="fill-amber-400" />
-                  <span>Premium</span>
+                  <span>Vérifié & Actif</span>
                 </div>
               )}
             </div>
 
-            {/* Bouton Cœur (Favori) */}
+            {/* Bouton Cœur */}
             {onToggleFavori && (
               <button
                 onClick={(e) => {
-                  e.preventDefault(); // Empêche de cliquer sur le lien parent si besoin
+                  e.preventDefault();
                   onToggleFavori(pro.id);
                 }}
                 className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-red-400 transition-colors"
@@ -88,13 +91,14 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
           </div>
 
           <div className="mt-2 flex flex-col gap-1 text-sm text-zinc-400">
+            {/* CORRECTION 5 : Champs aplatis 'metier_name' et 'zone_name' */}
             <div className="flex items-center gap-2">
               <Briefcase size={14} className="shrink-0" />
-              <span className="truncate">{pro.job?.nom ?? "Activité non précisée"}</span>
+              <span className="truncate">{pro.metier_name || "Activité non précisée"}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin size={14} className="shrink-0" />
-              <span className="truncate">{pro.location?.nom ?? "Localisation inconnue"}</span>
+              <span className="truncate">{pro.zone_name || "Localisation inconnue"}</span>
             </div>
           </div>
         </div>
@@ -115,7 +119,8 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
         ) : (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-zinc-500 cursor-not-allowed">
             <Phone size={16} />
-            {maskPhone(pro.telephone_appel)}
+            {/* Le backend renvoie null si pas premium, mais on gère le cas visuel */}
+            {pro.telephone_appel ? maskPhone(pro.telephone_appel) : "*******"}
           </div>
         )}
 
@@ -133,7 +138,6 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
             WhatsApp
           </a>
         ) : (
-           // Si pas premium, on propose de voir le profil ou bouton désactivé
            <Link
              href={detailHref}
              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors"

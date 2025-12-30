@@ -1,16 +1,18 @@
 "use client";
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { useAuthStore } from "./auth.store"; // Assurez-vous que le chemin est bon
+import { useAuthStore } from "@/lib/auth.store"; // ✅ Assurez-vous que l'import pointe bien vers votre fichier
+
+// On s'assure que l'URL ne finit pas par un slash pour éviter les doubles //
+const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL,
   headers: { "Content-Type": "application/json" },
 });
 
 // --- 1. INTERCEPTEUR DE REQUÊTE (Injection Token) ---
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  // On récupère le token directement du store Zustand à chaque requête
   const token = useAuthStore.getState().accessToken;
 
   if (token) {
@@ -19,10 +21,10 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// --- Variables pour la gestion du Refresh ---
+// --- Variables pour la gestion du Refresh (File d'attente) ---
 let isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (value: unknown) => void;
+  resolve: (token: string) => void;
   reject: (reason?: any) => void;
 }> = [];
 
@@ -31,24 +33,31 @@ const processQueue = (error: any, token: string | null = null) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(token as string);
     }
   });
   failedQueue = [];
 };
 
-// --- 2. INTERCEPTEUR DE RÉPONSE (Gestion Erreurs 401) ---
+// --- 2. INTERCEPTEUR DE RÉPONSE (Gestion 401 & Refresh) ---
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
     const originalRequest = error.config as any;
-    const status = error.response?.status;
+
+    // Si l'erreur n'a pas de réponse (ex: réseau coupé), on rejette direct
+    if (!error.response) {
+      return Promise.reject(error);
+    }
+
+    const status = error.response.status;
 
     // Détection des routes d'auth pour éviter les boucles infinies
     const url = String(originalRequest?.url || "");
-    const isAuthRoute = url.includes("/auth/login/") || url.includes("/auth/token/refresh/");
+    // ⚠️ Ajustez ces chemins si vos URLs Django sont différentes (ex: /token/refresh/)
+    const isAuthRoute = url.includes("login") || url.includes("refresh");
 
-    // Si ce n'est pas une 401, ou si on a déjà tenté de retry, ou si c'est l'API de login qui foire
+    // Si ce n'est pas une 401, ou si on a déjà tenté de retry, ou si c'est une route auth
     if (status !== 401 || originalRequest._retry || isAuthRoute) {
       return Promise.reject(error);
     }
@@ -76,31 +85,34 @@ api.interceptors.response.use(
         throw new Error("No refresh token available");
       }
 
-      // Appel direct avec axios (pas l'instance api) pour éviter l'intercepteur
-      const { data } = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/token/refresh/`,
+      // Appel direct avec axios "nu" pour éviter de passer par les intercepteurs de 'api'
+      // ⚠️ Vérifiez bien que l'URL correspond à votre Django (souvent /api/token/refresh/)
+      const response = await axios.post(
+        `${baseURL}/api/auth/token/refresh/`,
         { refresh: refreshToken }
       );
 
-      const newAccessToken = data.access;
-      // Certains backends renvoient un nouveau refresh token, d'autres non.
-      // S'il n'y en a pas, on garde l'ancien.
-      const newRefreshToken = data.refresh || refreshToken;
+      const { access, refresh } = response.data;
 
       // Mise à jour du store
-      useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
+      // Si le back ne renvoie pas de nouveau refresh, on garde l'ancien
+      useAuthStore.getState().setTokens(access, refresh || refreshToken);
 
-      // On relance la file d'attente avec le nouveau token
-      processQueue(null, newAccessToken);
+      // On traite la file d'attente
+      processQueue(null, access);
 
-      // On relance la requête initiale qui avait échoué
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      // On relance la requête initiale
+      originalRequest.headers.Authorization = `Bearer ${access}`;
       return api(originalRequest);
 
     } catch (refreshError) {
-      // Si le refresh échoue (token expiré ou invalide), on déconnecte tout le monde
+      // Si le refresh échoue (ex: refresh token expiré), on déconnecte l'utilisateur
       processQueue(refreshError, null);
       useAuthStore.getState().logout();
+
+      // Optionnel : Rediriger vers login via window.location si nécessaire
+      // window.location.href = '/pro/login';
+
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

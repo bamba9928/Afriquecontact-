@@ -8,6 +8,7 @@ from django.db.models import (
     Prefetch,
     OuterRef,
     Exists,
+    Q
 )
 from django.db.models.functions import Radians, Sin, Cos, ACos, Greatest, Least
 from django.shortcuts import get_object_or_404
@@ -278,3 +279,34 @@ class ContactFavoriDestroyView(generics.DestroyAPIView):
             self.get_queryset(),
             professionnel_id=self.kwargs.get(self.lookup_url_kwarg),
         )
+
+
+# ... (Après la classe ContactFavoriDestroyView)
+
+# Définition du Serializer étendu (si pas dans serializers.py)
+class ProPublicDetailSerializer(ProPublicSerializer):
+    media = MediaProSerializer(many=True, read_only=True)
+
+    class Meta(ProPublicSerializer.Meta):
+        fields = ProPublicSerializer.Meta.fields + ["media"]
+
+
+class ProPublicDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = ProPublicDetailSerializer
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        qs = (
+            ProfilProfessionnel.objects
+            .select_related("metier", "zone_geographique", "utilisateur")
+            .prefetch_related("media")
+        )
+
+        user = getattr(self.request, "user", None)
+        # Si c'est le propriétaire connecté, il peut voir son profil même si "est_publie=False"
+        if user and user.is_authenticated:
+            return qs.filter(Q(est_publie=True) | Q(utilisateur=user))
+
+        # Sinon, seuls les profils publics sont visibles
+        return qs.filter(est_publie=True)

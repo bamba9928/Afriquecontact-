@@ -5,13 +5,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/store/auth"; // Vérifiez le chemin de votre store
+import { useAuthStore } from "@/lib/auth.store";
 import { useRouter } from "next/navigation";
 import { Loader2, Phone, Lock, AlertCircle } from "lucide-react";
 
 // Schéma de validation
 const Schema = z.object({
-  phone: z.string().min(9, "Numéro trop court"), // Sénégal = 9 chiffres souvent
+  phone: z.string().min(9, "Numéro trop court"),
   password: z.string().min(4, "Mot de passe requis"),
 });
 
@@ -19,7 +19,9 @@ type FormValues = z.infer<typeof Schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const setAccessToken = useAuth((s) => s.setAccessToken);
+
+  const setTokens = useAuthStore((s) => s.setTokens);
+
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   const {
@@ -31,26 +33,25 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: FormValues) => {
-    setGlobalError(null); // Reset erreur précédente
+    setGlobalError(null);
     try {
-      // ⚠️ NOTE SWAGGER : Vérifiez sur /api/docs/
-      // Souvent Django (SimpleJWT) attend { "username": ..., "password": ... }
-      // Si votre backend attend "phone", laissez tel quel.
-      // Sinon, mappez ici :
+      // Payload pour l'API
       const payload = {
-        // username: values.phone, // Décommentez si l'API renvoie "username field is required"
         phone: values.phone,
         password: values.password
       };
 
       const { data } = await api.post("/api/auth/login/", payload);
 
-      // Gestion flexible du token (access, token, ou key selon DRF/Dj-Rest-Auth)
-      const token = data?.access || data?.token || data?.key;
+      // ✅ CORRECTION 3 : Récupération des deux tokens (Access & Refresh)
+      // Adaptez selon le retour de votre API (access/refresh ou key/token)
+      const accessToken = data?.access || data?.token || data?.key;
+      const refreshToken = data?.refresh || null;
 
-      if (!token) throw new Error("Aucun token reçu du serveur");
+      if (!accessToken) throw new Error("Aucun token reçu du serveur");
 
-      setAccessToken(token);
+      // ✅ CORRECTION 4 : Sauvegarde dans le store
+      setTokens(accessToken, refreshToken);
 
       // Redirection
       router.push("/pro/dashboard");
@@ -58,7 +59,6 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Erreur Login:", error);
 
-      // Gestion des erreurs API spécifiques
       if (error.response?.status === 401 || error.response?.status === 400) {
         setGlobalError("Numéro ou mot de passe incorrect.");
       } else {

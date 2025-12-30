@@ -8,13 +8,15 @@ from .views import (
     AdminRetraitPublicationProView,
     MediaProCreateView,
     ContactFavoriView,
-    ContactFavoriDestroyView
+    ContactFavoriDestroyView,
+    ProPublicDetailView
 )
 
 urlpatterns = [
     # --- Recherche Publique ---
     # Endpoint pour le mobile : GET /api/pros/recherche/?job=...&lat=...
     path("recherche/", RechercheProView.as_view(), name="pro_recherche"),
+    path("public/<slug:slug>/", ProPublicDetailView.as_view(), name="pro_public_detail"),
 
     # --- Espace Professionnel (Gestion de soi) ---
     path("me/", MonProfilProView.as_view(), name="pro_me"),

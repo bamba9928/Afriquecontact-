@@ -24,77 +24,290 @@ class Command(BaseCommand):
             defaults={"slug": "senegal"},
         )
 
-        # 2. LES 14 RÉGIONS ET VILLES PRINCIPALES
-        locations_data = {
-            "Dakar": ["Dakar Plateau", "Pikine", "Guédiawaye", "Rufisque", "Keur Massar"],
-            "Thiès": ["Thiès Ville", "Mbour", "Saly", "Tivaouane", "Joal-Fadiouth"],
-            "Diourbel": ["Touba", "Mbacké", "Diourbel Ville"],
-            "Saint-Louis": ["Saint-Louis Ville", "Richard-Toll", "Dagana", "Podor"],
-            "Ziguinchor": ["Ziguinchor Ville", "Bignona", "Oussouye", "Cap Skirring"],
-            "Kaolack": ["Kaolack Ville", "Nioro du Rip", "Guinguinéo"],
-            "Louga": ["Louga Ville", "Linguère", "Kébémer"],
-            "Fatick": ["Fatick Ville", "Foundiougne", "Gossas"],
-            "Kolda": ["Kolda Ville", "Vélingara"],
-            "Matam": ["Matam Ville", "Ourossogui", "Kanel"],
-            "Kaffrine": ["Kaffrine Ville", "Koungheul"],
-            "Tambacounda": ["Tambacounda Ville", "Bakel"],
-            "Kédougou": ["Kédougou Ville", "Salémata"],
-            "Sédhiou": ["Sédhiou Ville", "Goudomp"],
+        # 2) RÉGIONS -> DÉPARTEMENTS (46)
+        regions_departements = {
+            "Dakar": ["Dakar", "Pikine", "Rufisque", "Guédiawaye", "Keur Massar"],
+            "Ziguinchor": ["Bignona", "Oussouye", "Ziguinchor"],
+            "Diourbel": ["Bambey", "Diourbel", "Mbacké"],
+            "Saint-Louis": ["Dagana", "Podor", "Saint-Louis"],
+            "Tambacounda": ["Bakel", "Tambacounda", "Goudiry", "Koumpentoum"],
+            "Kaolack": ["Kaolack", "Nioro du Rip", "Guinguinéo"],
+            "Thiès": ["M'bour", "Thiès", "Tivaouane"],
+            "Louga": ["Kébémer", "Linguère", "Louga"],
+            "Fatick": ["Fatick", "Foundiougne", "Gossas"],
+            "Kolda": ["Kolda", "Vélingara", "Médina Yoro Foulah"],
+            "Matam": ["Kanel", "Matam", "Ranérou-Ferlo"],
+            "Kaffrine": ["Kaffrine", "Birkelane", "Koungheul", "Malem-Hodar"],
+            "Kédougou": ["Kédougou", "Salémata", "Saraya"],
+            "Sédhiou": ["Sédhiou", "Bounkiling", "Goudomp"],
         }
 
-        for reg_name, cities in locations_data.items():
+        # 2 quartiers "par défaut" par département (tu pourras remplacer par des vrais quartiers ensuite)
+        default_quartiers = ["Centre-ville", "Zone périphérique"]
+
+        for reg_name, deps in regions_departements.items():
             region, _ = Location.objects.get_or_create(
                 type=Location.Type.REGION,
                 parent=senegal,
                 name=reg_name,
                 defaults={"slug": unique_slug(Location, f"{reg_name}-region")},
             )
-            for city_name in cities:
-                Location.objects.get_or_create(
-                    type=Location.Type.CITY,
+
+            for dep_name in deps:
+                dep, _ = Location.objects.get_or_create(
+                    type=Location.Type.DEPARTMENT,
                     parent=region,
-                    name=city_name,
-                    defaults={"slug": unique_slug(Location, f"{city_name}-{reg_name}")},
+                    name=dep_name,
+                    defaults={"slug": unique_slug(Location, f"{dep_name}-{reg_name}-departement")},
                 )
+
+                for q in default_quartiers:
+                    Location.objects.get_or_create(
+                        type=Location.Type.DISTRICT,
+                        parent=dep,
+                        name=q,
+                        defaults={"slug": unique_slug(Location, f"{q}-{dep_name}")},
+                    )
 
         # 3. MÉTIERS ET CATÉGORIES DU CAHIER DES CHARGES
         catalog_data = {
-            "Numérique et TIC": {
-                "Développement": ["Développement web", "Data analyste"],
-                "Infrastructure": ["Spécialiste en cybersécurité", "Technicien en réseaux"],
-                "Marketing Digital": ["Community manager"],
+            "Numérique et Technologies de l'Information (TIC)": {
+                "Développement & Data": [
+                    "Développement web",
+                    "Data analyste",
+                ],
+                "Réseaux, Cybersécurité & Social": [
+                    "Spécialiste en cybersécurité",
+                    "Technicien en réseaux",
+                    "Community manager",
+                ],
             },
-            "Énergies et Environnement": {
-                "Solaire": ["Ingénieur en énergie solaire", "Technicien de maintenance solaire"],
-                "Expertise": ["Spécialiste en gestion durable", "Expert en climat"],
+
+            "Énergies Renouvelables et Économie Verte": {
+                "Ingénierie & Maintenance": [
+                    "Ingénieur en énergie solaire ou éolienne",
+                    "Technicien de maintenance de systèmes solaires",
+                ],
+                "Gestion durable & Climat": [
+                    "Spécialiste en gestion durable",
+                    "Expert en climat",
+                ],
             },
-            "Agrobusiness": {
-                "Production": ["Ingénieur agronome", "Technicien de production"],
-                "Qualité et Logistique": ["Responsable qualité", "Spécialiste supply chain agricole"],
+
+            "Agrobusiness et Agro-industrie": {
+                "Production agricole": [
+                    "Ingénieur agronome",
+                    "Technicien de production",
+                ],
+                "Qualité, Marketing & Supply": [
+                    "Responsable qualité",
+                    "Spécialiste du marketing agroalimentaire",
+                    "Spécialiste en gestion de la chaîne d'approvisionnement agricole",
+                ],
             },
-            "BTP et Urbanisme": {
-                "Conception": ["Architecte", "Urbaniste", "Ingénieur civil"],
-                "Chantier": ["Technicien en construction", "Maçon", "Ferrailleur", "Peintre", "Plombier"],
+
+            "BTP (Bâtiment et Travaux Publics) et Urbanisme": {
+                "Conception": [
+                    "Ingénieur civil",
+                    "Architecte",
+                ],
+                "Terrain & Chantier": [
+                    "Urbaniste",
+                    "Technicien en construction",
+                ],
             },
+
+            "E-commerce et Logistique": {
+                "Supply Chain": [
+                    "Logisticien",
+                    "Spécialiste en chaîne d'approvisionnement (Supply Chain)",
+                ],
+                "Plateformes & Livraison": [
+                    "Responsable de plateformes marchandes",
+                    "Livreur professionnel",
+                ],
+            },
+
             "Santé et Bien-être": {
-                "Médical": ["Médecin", "Infirmier", "Pharmacien"],
-                "Technique": ["Technicien biomédical", "Chercheur en santé publique"],
+                "Soins": [
+                    "Médecin",
+                    "Infirmier",
+                    "Pharmacien",
+                ],
+                "Technique & Recherche": [
+                    "Technicien biomédical",
+                    "Chercheur en santé publique",
+                ],
             },
-            "Services de Maison": {
-                "Entretien": ["Ménagère", "Jardinier", "Gardien"],
-                "Famille": ["Nounou", "Aide à domicile"],
+
+            "Immobilier et Parking": {
+                "Immobilier": [
+                    "Agent immobilier",
+                ],
+                "Parking": [
+                    "Gérant de parking Automobile",
+                ],
             },
-            "Hôtellerie et Tourisme": {
-                "Gestion": ["Gestionnaire d'hôtel", "Chef de cuisine"],
-                "Services": ["Guide touristique", "Spécialiste marketing touristique"],
-            }
+
+            "Gestion, Finance et Juridique": {
+                "Comptabilité & Contrôle": [
+                    "Comptable",
+                    "Auditeur",
+                    "Contrôleur de gestion",
+                ],
+                "RH, Conformité & Juridique": [
+                    "Responsable RH (Ressources Humaines)",
+                    "Responsable conformité",
+                    "Juriste d'entreprise",
+                    "Gestionnaire de portefeuille",
+                ],
+            },
+
+            "Commercial et Marketing": {
+                "Vente": [
+                    "Commercial/Vendeur terrain",
+                    "Attaché commercial",
+                ],
+                "Marketing & Service client": [
+                    "Responsable marketing digital",
+                    "Téléconseiller",
+                    "Responsable service clients",
+                ],
+            },
+
+            "Technique et Industriel": {
+                "Maintenance": [
+                    "Technicien de maintenance mécanique",
+                    "Technicien en électricité",
+                ],
+                "Production": [
+                    "Ingénieur de production",
+                ],
+            },
+
+            "Hôtellerie, Tourisme et Restauration": {
+                "Gestion & Marketing touristique": [
+                    "Gestionnaire d'hôtel",
+                    "Spécialiste du marketing Touristique",
+                ],
+                "Cuisine & Guidage": [
+                    "Chef de cuisine",
+                    "Guide touristique",
+                ],
+            },
+
+            "Éducation et Formation": {
+                "Formation": [
+                    "Formateur spécialisé mécanique",
+                    "Formateur informatique",
+                ],
+                "Enseignement": [
+                    "Formateur entrepreneuriat",
+                    "Professeur (secondaire ou universitaire)",
+                ],
+            },
+
+            # NOUVELLE CATÉGORIE AJOUTÉE
+            "Artisanat & Services": {
+                "Coiffure & Beauté": [
+                    "Coiffeur",
+                    "Coiffeuse",
+                ],
+                "Menuiserie": [
+                    "Menuisier bois",
+                    "Menuisier alu",
+                ],
+                "BTP & Finitions": [
+                    "Carreleur",
+                    "Peintre",
+                ],
+                "Plomberie & Soudure": [
+                    "Plombier",
+                    "Soudeur",
+                ],
+                "Textile & Ameublement": [
+                    "Tailleur",
+                    "Tapissier",
+                ],
+                "Artisanat d'art": [
+                    "Bijoutier",
+                    "Sculpteur",
+                ],
+                "Impression & Design": [
+                    "Infographe",
+                    "Sérigraphe",
+                ],
+                "Alimentation & Traiteur": [
+                    "Boulanger",
+                    "Traiteur",
+                ],
+                "Transport & Livraison": [
+                    "Chauffeur",
+                    "Livreur",
+                ],
+                "Entretien & Garde à domicile": [
+                    "Ménagère",
+                    "Nounou",
+                ],
+                "Sécurité & Assistance": [
+                    "Gardien",
+                    "Technicien",
+                ],
+                "Décoration & Média": [
+                    "Décorateur",
+                    "Photographe",
+                ],
+                "Informatique & Comptabilité": [
+                    "Informaticien",
+                    "Comptable",
+                ],
+                "Réparation": [
+                    "Cordonnier",
+                    "Mécanicien",
+                ],
+            },
         }
 
-        # Liste des métiers "Les plus recherchés" pour le flag is_featured
-        featured_list = [
-            "Coiffeur", "Mécanicien", "Ménagère", "Nounou", "Livreur",
-            "Soudeur", "Chauffeur", "Plombier", "Maçon", "Tailleur"
+        # Liste des métiers en vedette (featured) - sans doublons
+        extra_featured = [
+            "Coiffeur", "Coiffeuse",
+            "Mécanicien",
+            "Ménagère",
+            "Nounou",
+            "Livreur",
+            "Soudeur",
+            "Chauffeur",
+            "Menuisier bois", "Menuisier alu",
+            "Carreleur",
+            "Technicien",
+            "Gardien",
+            "Peintre",
+            "Plombier",
+            "Tailleur",
+            "Bijoutier",
+            "Informaticien",
+            "Tapissier",
+            "Infographe",
+            "Traiteur",
+            "Sérigraphe",
+            "Boulanger",
+            "Comptable",
+            "Décorateur",
+            "Cordonnier",
+            "Sculpteur",
+            "Photographe",
+            "Livreur professionnel",  # Déjà présent dans E-commerce
         ]
+
+        featured_list = sorted(set([
+            "Développement web",
+            "Data analyste",
+            "Infirmier",
+            "Comptable",
+            "Commercial/Vendeur terrain",
+            "Agent immobilier",
+            "Logisticien",
+        ] + extra_featured))
 
         for cat_name, subcats in catalog_data.items():
             parent_cat, _ = JobCategory.objects.get_or_create(
@@ -126,3 +339,4 @@ class Command(BaseCommand):
                         job.save(update_fields=["is_featured"])
 
         self.stdout.write(self.style.SUCCESS("Seed catalog complet terminé avec succès !"))
+        self.stdout.write(self.style.SUCCESS(f"Total métiers en vedette : {len(featured_list)}"))

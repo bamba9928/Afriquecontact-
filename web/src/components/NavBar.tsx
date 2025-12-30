@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/auth.store";
-import { LayoutDashboard, LogIn, Heart } from "lucide-react"; // Ajout de l'icône Heart si besoin
+import { LayoutDashboard, LogIn, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function NavBar() {
@@ -44,7 +44,6 @@ export default function NavBar() {
             Annonces
           </Link>
 
-          {/* ✅ AJOUT DU LIEN FAVORIS / CONTACTS */}
           <Link href="/contacts" className={linkClass("/contacts")}>
             Mes Contacts
           </Link>

@@ -5,9 +5,11 @@ class Location(models.Model):
     """
     Gère la hiérarchie géographique : Pays > Région > Ville > Quartier.
     """
+
     class Type(models.TextChoices):
         COUNTRY = "COUNTRY", "Pays"
         REGION = "REGION", "Région"
+        DEPARTMENT = "DEPARTMENT", "Département"
         CITY = "CITY", "Ville"
         DISTRICT = "DISTRICT", "Quartier"
 

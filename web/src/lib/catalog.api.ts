@@ -1,40 +1,76 @@
 "use client";
 
 import { api } from "./api";
-import { unwrapList } from "./paginate";
-import type { Job, Location } from "./types";
 
-// --- Types Avancés ---
+// --- TYPES ---
 
-// Permet de typer l'arbre des localités (Région -> Ville -> Quartier)
-export type LocationTree = Location & {
-  children?: LocationTree[];
+export type Job = {
+  id: number;
+  name: string;
+  slug?: string;
+  category: number; // ID de la sous-catégorie
+  is_featured?: boolean;
 };
 
-// --- API Calls ---
+// Structure hiérarchique des Catégories
+export type CategoryNode = {
+  id: number;
+  name: string;
+  slug: string;
+  subcategories: CategoryNode[]; // Enfants
+};
 
+export type LocationType = "COUNTRY" | "REGION" | "DEPARTMENT" | "CITY" | "DISTRICT";
+
+// Structure hiérarchique des Lieux (Pays -> Région -> Département -> Quartier)
+export type LocationNode = {
+  id: number;
+  name: string;
+  slug: string;
+  type: LocationType;
+  children: LocationNode[];
+};
+
+// --- API CALLS ---
+
+// 1. Récupérer tous les jobs (pour filtrer localement)
+export async function getAllJobs(): Promise<Job[]> {
+  const { data } = await api.get("/api/catalog/jobs/", { params: { page_size: 1000 } });
+  return (data.results || data) as Job[];
+}
+
+// 1bis. Récupérer les jobs mis en avant (featured)
 export async function getFeaturedJobs(): Promise<Job[]> {
   const { data } = await api.get("/api/catalog/jobs/featured/");
-  return unwrapList<Job>(data);
+  return (data.results || data) as Job[];
 }
 
-// Ajout du paramètre "search" (optionnel) pour filtrer côté serveur
-export async function getAllJobs(search?: string): Promise<Job[]> {
-  const params = search ? { search } : {};
-  const { data } = await api.get("/api/catalog/jobs/", { params });
-  return unwrapList<Job>(data);
+// 2. Récupérer l'arbre des catégories (Parent -> Sub)
+export async function getCategoriesTree(): Promise<CategoryNode[]> {
+  const { data } = await api.get("/api/catalog/categories/tree/");
+  return data as CategoryNode[];
 }
 
-// Ajout du paramètre "parent" ou "search" pour les localités
-export async function getLocations(params?: { search?: string; parent?: number }): Promise<Location[]> {
-  const { data } = await api.get("/api/catalog/locations/", { params });
-  return unwrapList<Location>(data);
-}
-
-// Typage strict de l'arbre (plus de 'any')
-export async function getLocationsTree(): Promise<LocationTree[]> {
+// 3. Récupérer l'arbre géographique (Pays -> Régions -> Départements -> Quartiers)
+// On renvoie une liste de régions (avec leurs enfants).
+export async function getLocationsTree(): Promise<LocationNode[]> {
   const { data } = await api.get("/api/catalog/locations/tree/");
-  // Les endpoints 'tree' renvoient souvent une liste directe des racines,
-  // mais on utilise unwrapList par sécurité si jamais c'est paginé.
-  return unwrapList<LocationTree>(data);
+
+  // Le backend peut renvoyer le PAYS en racine ou une liste directe
+  const root = Array.isArray(data) ? data : [data];
+
+  const regions: LocationNode[] = [];
+
+  const findRegions = (nodes: any[]) => {
+    nodes.forEach((node) => {
+      if (node?.type === "REGION") {
+        regions.push(node as LocationNode);
+      } else if (node?.children?.length) {
+        findRegions(node.children);
+      }
+    });
+  };
+
+  findRegions(root);
+  return regions.sort((a, b) => a.name.localeCompare(b.name));
 }

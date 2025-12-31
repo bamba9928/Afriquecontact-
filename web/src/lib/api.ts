@@ -1,7 +1,7 @@
 "use client";
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { useAuthStore } from "@/lib/auth.store"; // ✅ Assurez-vous que l'import pointe bien vers votre fichier
+import { useAuthStore } from "@/lib/auth.store";
 
 // On s'assure que l'URL ne finit pas par un slash pour éviter les doubles //
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
@@ -54,7 +54,7 @@ api.interceptors.response.use(
 
     // Détection des routes d'auth pour éviter les boucles infinies
     const url = String(originalRequest?.url || "");
-    // ⚠️ Ajustez ces chemins si vos URLs Django sont différentes (ex: /token/refresh/)
+
     const isAuthRoute = url.includes("login") || url.includes("refresh");
 
     // Si ce n'est pas une 401, ou si on a déjà tenté de retry, ou si c'est une route auth
@@ -86,7 +86,6 @@ api.interceptors.response.use(
       }
 
       // Appel direct avec axios "nu" pour éviter de passer par les intercepteurs de 'api'
-      // ⚠️ Vérifiez bien que l'URL correspond à votre Django (souvent /api/token/refresh/)
       const response = await axios.post(
         `${baseURL}/api/auth/token/refresh/`,
         { refresh: refreshToken }

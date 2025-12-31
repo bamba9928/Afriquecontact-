@@ -1,32 +1,41 @@
 "use client";
 import { api } from "./api";
 import { unwrapList } from "./paginate";
-import type { Annonce } from "./types";
+import type { Annonce, Paginated } from "./types";
 
-// Type pour la création (on force certains champs obligatoires)
+// Type aligné sur le modèle Django (annonces/models.py)
 export type CreateAnnoncePayload = {
   titre: string;
-  type: "offre" | "demande";
-  categorie_id?: number; // ou slug
-  description?: string;
-  prix?: number;
-  ville?: string;
-  // Si l'upload d'image se fait via un autre endpoint, pas besoin de fichier ici
+  type: "OFFRE" | "DEMANDE";
+  categorie: number; // ID de la catégorie
+  zone_geographique: number; // ID de la zone (Location)
+  adresse_precise?: string;
+  description: string;
+  telephone: string;
 };
+
+export type UpdateAnnoncePayload = Partial<CreateAnnoncePayload>;
 
 // --- LECTURE ---
 
-// Ajout du support des filtres (ex: ?ville=Dakar&type=offre)
-export async function listAnnonces(filters?: Record<string, string | number>): Promise<Annonce[]> {
+// Liste publique avec filtres (ex: ?zone_geographique=5&type=OFFRE)
+export async function listAnnonces(filters?: Record<string, string | number>): Promise<Paginated<Annonce>> {
   const { data } = await api.get("/api/annonces/", { params: filters });
-  return unwrapList<Annonce>(data);
+
+  // Gestion robuste si le backend renvoie une liste directe ou une pagination
+  if (Array.isArray(data)) {
+      return { results: data, count: data.length, next: null, previous: null };
+  }
+  return data;
 }
 
+// Mes annonces (Authentifié)
 export async function mesAnnonces(): Promise<Annonce[]> {
   const { data } = await api.get("/api/annonces/mes-annonces/");
   return unwrapList<Annonce>(data);
 }
 
+// Détail d'une annonce
 export async function getAnnonceDetail(id: number): Promise<Annonce> {
   const { data } = await api.get(`/api/annonces/${id}/`);
   return data;
@@ -35,13 +44,12 @@ export async function getAnnonceDetail(id: number): Promise<Annonce> {
 // --- ÉCRITURE (CRUD) ---
 
 export async function creerAnnonce(payload: CreateAnnoncePayload): Promise<Annonce> {
+  // Par défaut en REST : POST /api/annonces/
   const { data } = await api.post("/api/annonces/creer/", payload);
   return data;
 }
 
-export async function updateAnnonce(id: number, payload: Partial<CreateAnnoncePayload>): Promise<Annonce> {
-  // Django Rest Framework utilise souvent PATCH pour les modifs partielles
-  // L'URL dépend de votre urls.py, souvent : /api/annonces/{id}/ ou /api/annonces/{id}/update/
+export async function updateAnnonce(id: number, payload: UpdateAnnoncePayload): Promise<Annonce> {
   const { data } = await api.patch(`/api/annonces/${id}/`, payload);
   return data;
 }

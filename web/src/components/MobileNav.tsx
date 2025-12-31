@@ -2,12 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Heart, User, LayoutDashboard } from "lucide-react";
+import { Home, Search, Heart, LayoutDashboard, LogIn } from "lucide-react";
+import { useAuthStore } from "@/lib/auth.store";
+import { useEffect, useState } from "react";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Liste des onglets pour une gestion plus propre
+  useEffect(() => setIsMounted(true), []);
+
+  // Détermine la destination du 4ème onglet (Espace Pro)
+  const isConnected = isMounted && !!accessToken;
+
+  const proTab = {
+    href: isConnected ? "/dashboard" : "/pro/login", // [Correction] Route conforme à dashboard/page.tsx
+    label: isConnected ? "Dashboard" : "Espace Pro",
+    icon: isConnected ? LayoutDashboard : LogIn,
+  };
+
   const tabs = [
     {
       href: "/",
@@ -24,15 +38,9 @@ export function MobileNav() {
       label: "Contacts",
       icon: Heart
     },
-    {
-      // Je recommande /pro/dashboard ou /pro/login comme point d'entrée
-      href: "/pro/dashboard",
-      label: "Espace Pro",
-      icon: LayoutDashboard // Plus représentatif que User pour un dashboard
-    },
+    proTab // Onglet dynamique
   ];
 
-  // Logique pour savoir si un onglet est actif (gère les sous-dossiers)
   const isActive = (href: string) => {
     if (href === "/" && pathname !== "/") return false;
     return pathname.startsWith(href);
@@ -40,7 +48,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/90 backdrop-blur-lg md:hidden pb-[env(safe-area-inset-bottom)]">
-      <div className="flex h-16 items-center justify-around px-2">
+      <div className="flex h-16 items-center justify-around px-1">
         {tabs.map((tab) => {
           const active = isActive(tab.href);
           const Icon = tab.icon;
@@ -55,11 +63,11 @@ export function MobileNav() {
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              {/* Indicateur visuel (ligne ou glow) pour l'actif */}
+              {/* Indicateur visuel */}
               <div
-                className={`mb-1 rounded-full p-1 transition-all ${
+                className={`rounded-full p-1 transition-all ${
                   active
-                    ? "bg-white/10 text-emerald-400" // Touche de couleur "Pro"
+                    ? "bg-white/10 text-emerald-400"
                     : "bg-transparent"
                 }`}
               >

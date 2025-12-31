@@ -5,6 +5,7 @@ import type { ElementType } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth.store";
+import Link from "next/link"; // [Correction] Import de Link pour la navigation
 
 import { getAllJobs, getLocationsTree, type LocationNode } from "@/lib/catalog.api";
 import {
@@ -206,7 +207,7 @@ function SearchContent() {
   const { data: jobs } = useQuery({ queryKey: ["jobs-all"], queryFn: getAllJobs, staleTime: Infinity });
   const { data: locsTree } = useQuery({ queryKey: ["locs-tree"], queryFn: getLocationsTree, staleTime: Infinity });
 
-  // Auto-détection Région + Département à partir du Quartier (URL zone_geographique)
+  // Auto-détection Région + Ville (Département) à partir du Quartier
   useEffect(() => {
     if (!districtId || regionId || departmentId || !locsTree) return;
 
@@ -247,31 +248,50 @@ function SearchContent() {
   // Options métiers
   const jobOptions = useMemo(() => (jobs ?? []).map((j) => ({ id: j.id, label: j.name })), [jobs]);
 
-  // Options zones: Région -> Département -> Quartier
+  // Options zones: Région -> Ville (Département) -> Quartier
   const regionOptions = useMemo(() => (locsTree ?? []).map((r) => ({ id: r.id, label: r.name })), [locsTree]);
 
   const departmentOptions = useMemo(() => {
-    if (!regionId || !locsTree) return [];
-    const region = locsTree.find((r) => r.id === regionId);
-    return (region?.children ?? []).map((d) => ({ id: d.id, label: d.name }));
-  }, [regionId, locsTree]);
+      if (!regionId || !locsTree) return [];
+      const region = locsTree.find((r) => r.id === regionId);
+
+      // Garde uniquement les DEPARTMENTS (ceux qui ont les DISTRICTS comme enfants)
+      const deps = (region?.children ?? []).filter((n: any) => n.type === "DEPARTMENT");
+
+      // Optionnel: dédoublonnage par label si ta base contient des incohérences
+      const seen = new Set<string>();
+      return deps
+        .map((d: any) => ({ id: d.id, label: d.name }))
+        .filter((o) => (seen.has(o.label) ? false : (seen.add(o.label), true)));
+    }, [regionId, locsTree]);
+
 
   const districtOptions = useMemo(() => {
-    if (!regionId || !departmentId || !locsTree) return [];
-    const region = locsTree.find((r) => r.id === regionId);
-    const dept = (region?.children ?? []).find((d) => d.id === departmentId);
-    return (dept?.children ?? []).map((q) => ({ id: q.id, label: q.name }));
-  }, [regionId, departmentId, locsTree]);
+      if (!regionId || !departmentId || !locsTree) return [];
+      const region = locsTree.find((r) => r.id === regionId);
+
+      const dept = (region?.children ?? []).find((d: any) => d.id === departmentId && d.type === "DEPARTMENT");
+      return (dept?.children ?? []).map((q: any) => ({ id: q.id, label: q.name }));
+    }, [regionId, departmentId, locsTree]);
+
 
   // Reset cascade zone
   useEffect(() => {
-    setDepartmentId("");
-    setDistrictId("");
-  }, [regionId]);
+      if (!districtId || regionId || departmentId || !locsTree) return;
 
-  useEffect(() => {
-    setDistrictId("");
-  }, [departmentId]);
+      for (const r of locsTree as any[]) {
+        for (const d of r.children ?? []) {
+          if (d.type !== "DEPARTMENT") continue;
+          const found = (d.children ?? []).some((q: any) => q.id === districtId);
+          if (found) {
+            setRegionId(r.id);
+            setDepartmentId(d.id);
+            return;
+          }
+        }
+      }
+    }, [districtId, regionId, departmentId, locsTree]);
+
 
   // --- REQUÊTES PRINCIPALES ---
 
@@ -399,12 +419,12 @@ function SearchContent() {
             />
           </div>
 
-          {/* Département */}
+          {/* Ville (Type Département Backend) */}
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-500">Département</label>
+            <label className="text-xs text-zinc-500">Ville</label> {/* [Correction] Libellé Ville */}
             <SearchableSelect
               icon={MapPin}
-              placeholder={!regionId ? "Choisir une région..." : "Tout département"}
+              placeholder={!regionId ? "Choisir une région..." : "Toute ville"}
               options={departmentOptions}
               value={departmentId}
               onChange={(v) => setDepartmentId(v)}
@@ -417,7 +437,7 @@ function SearchContent() {
             <label className="text-xs text-zinc-500">Quartier</label>
             <SearchableSelect
               icon={MapPin}
-              placeholder={!departmentId ? "Choisir un département..." : "Tout quartier"}
+              placeholder={!departmentId ? "Choisir une ville..." : "Tout quartier"}
               options={districtOptions}
               value={districtId}
               onChange={setDistrictId}
@@ -506,7 +526,11 @@ function SearchContent() {
 
               return (
                 <div key={p.id} className="flex flex-col gap-2">
-                  <ProCard pro={p} isFavorite={isFav} onToggleFavori={(id) => toggleFavoriMutation.mutate(id)} />
+                  {/* [Correction] Wrap avec Link pour accès aux détails */}
+                  <Link href={`/pros/${p.id}`} className="block transition-transform hover:scale-[1.01]">
+                      <ProCard pro={p} isFavorite={isFav} onToggleFavori={(id) => toggleFavoriMutation.mutate(id)} />
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => toggleFavoriMutation.mutate(p.id)}

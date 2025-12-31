@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { Phone, MapPin, Briefcase, Heart, MessageCircle, Star, ShieldCheck } from "lucide-react";
+import {
+  Phone,
+  MapPin,
+  Briefcase,
+  Heart,
+  MessageCircle,
+  Star,
+  LocateFixed,
+  Lock // ✅ Ajout de l'import manquant
+} from "lucide-react";
 import type { ProPublic } from "@/lib/types";
+import { mediaUrl } from "@/lib/media-url"; // ✅ Utilisation de l'utilitaire d'image
 
-// Fonction utilitaire pour le masquage
+// Fonction utilitaire pour le masquage visuel
 function maskPhone(p?: string | null) {
-  if (!p) return "Non renseigné";
+  if (!p) return "** ** ** **";
   const digits = p.replace(/\D/g, "");
   if (digits.length <= 4) return "****";
-  return digits.slice(0, 2) + "******" + digits.slice(-2);
+  return digits.slice(0, 2) + " ** ** " + digits.slice(-2);
 }
 
 interface ProCardProps {
@@ -19,41 +29,50 @@ interface ProCardProps {
 }
 
 export default function ProCard({ pro, isFavorite = false, onToggleFavori }: ProCardProps) {
-  // CORRECTION 1 : Utilisation de 'is_contactable' qui vient du backend (paiement OK)
-  // au lieu de deviner 'is_premium'.
   const isPremium = pro.is_contactable;
 
-  // CORRECTION 2 : Utilisation directe du slug racine
-  const detailHref = `/pro/${pro.slug}`;
+  // Utilisation du slug pour le SEO, fallback sur ID
+  const detailHref = `/pros/${pro.slug || pro.id}`;
 
-  // CORRECTION 3 : Fallback pour l'image (avatar ou placeholder)
-  const displayImage = pro.avatar || pro.photo_couverture;
+  // Image : Avatar, ou première image de la galerie, ou null
+  const rawImage = pro.avatar || (pro.medias && pro.medias.length > 0 ? pro.medias[0].fichier : null);
+  // ✅ Correction URL image (gestion relative/absolue)
+  const displayImage = mediaUrl(rawImage);
+
+  const isOnline = pro.statut_en_ligne === 'ONLINE';
 
   return (
-    <article className={`group relative flex flex-col gap-4 rounded-2xl border p-4 transition-all hover:border-white/20 ${
+    <article className={`group relative flex flex-col gap-4 rounded-2xl border p-4 transition-all hover:border-indigo-500/30 hover:shadow-lg ${
       isPremium
-        ? "border-amber-500/30 bg-gradient-to-br from-white/5 to-amber-500/5"
-        : "border-white/10 bg-white/5"
+        ? "border-amber-500/30 bg-gradient-to-br from-zinc-900 via-zinc-900 to-amber-900/10"
+        : "border-white/10 bg-zinc-900/50"
     }`}>
 
-      {/* HEADER : Photo + Infos principales + Cœur */}
+      {/* HEADER : Avatar + Infos */}
       <div className="flex items-start gap-4">
 
-        {/* Photo ou Initiale */}
-        <Link href={detailHref} className="shrink-0">
-          <div className="h-16 w-16 overflow-hidden rounded-xl bg-zinc-800 border border-white/10">
+        {/* Avatar avec indicateur de statut */}
+        <Link href={detailHref} className="relative shrink-0">
+          <div className="h-16 w-16 overflow-hidden rounded-xl bg-zinc-800 border border-white/10 ring-2 ring-transparent group-hover:ring-indigo-500/50 transition-all">
             {displayImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={displayImage}
-                alt={pro.nom_entreprise || "Pro"}
-                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                alt={pro.nom_entreprise || "Professionnel"}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-zinc-500">
+              <div className="flex h-full w-full items-center justify-center text-zinc-500 bg-zinc-800">
                 <Briefcase size={24} />
               </div>
             )}
+          </div>
+
+          {/* Badge Statut En Ligne */}
+          <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-zinc-900 flex items-center justify-center ${
+             isOnline ? "bg-emerald-500" : "bg-zinc-500"
+          }`} title={isOnline ? "En ligne" : "Hors ligne"}>
+             {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
           </div>
         </Link>
 
@@ -61,18 +80,26 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <Link href={detailHref} className="block truncate font-semibold text-lg text-white hover:underline decoration-white/30 underline-offset-4">
-                {/* CORRECTION 4 : 'nom_entreprise' (backend) au lieu de 'nom_commercial' */}
+              <Link href={detailHref} className="block truncate font-bold text-lg text-white hover:text-indigo-400 transition-colors">
                 {pro.nom_entreprise || `Pro #${pro.id}`}
               </Link>
 
-              {/* Badge Premium */}
-              {isPremium && (
-                <div className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-400">
-                  <Star size={12} className="fill-amber-400" />
-                  <span>Vérifié & Actif</span>
-                </div>
-              )}
+              {/* Badges : Premium / Distance */}
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {isPremium && (
+                    <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    <Star size={10} className="fill-amber-400" />
+                    <span>Vérifié</span>
+                    </div>
+                )}
+                {/* Affichage de la distance si disponible (Recherche géolocalisée) */}
+                {typeof pro.distance_km === 'number' && (
+                    <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    <LocateFixed size={10} />
+                    <span>{pro.distance_km < 1 ? "< 1 km" : `${pro.distance_km.toFixed(1)} km`}</span>
+                    </div>
+                )}
+              </div>
             </div>
 
             {/* Bouton Cœur */}
@@ -80,69 +107,70 @@ export default function ProCard({ pro, isFavorite = false, onToggleFavori }: Pro
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   onToggleFavori(pro.id);
                 }}
-                className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-red-400 transition-colors"
+                className={`rounded-full p-2 transition-all ${
+                    isFavorite
+                    ? "text-red-500 bg-red-500/10"
+                    : "text-zinc-500 hover:bg-white/10 hover:text-white"
+                }`}
                 title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
               >
-                <Heart size={20} className={isFavorite ? "fill-red-500 text-red-500" : ""} />
+                <Heart size={20} className={isFavorite ? "fill-current" : ""} />
               </button>
             )}
           </div>
 
           <div className="mt-2 flex flex-col gap-1 text-sm text-zinc-400">
-            {/* CORRECTION 5 : Champs aplatis 'metier_name' et 'zone_name' */}
             <div className="flex items-center gap-2">
-              <Briefcase size={14} className="shrink-0" />
-              <span className="truncate">{pro.metier_name || "Activité non précisée"}</span>
+              <Briefcase size={14} className="shrink-0 text-indigo-400" />
+              <span className="truncate">{pro.metier_name || "Métier non précisé"}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin size={14} className="shrink-0" />
-              <span className="truncate">{pro.zone_name || "Localisation inconnue"}</span>
+              <MapPin size={14} className="shrink-0 text-zinc-500" />
+              <span className="truncate">{pro.zone_name || "Sénégal"}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* FOOTER : Actions (Boutons) */}
-      <div className="mt-auto grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
+      {/* FOOTER : Actions */}
+      <div className="mt-auto grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
 
-        {/* Bouton Appeler */}
+        {/* APPEL */}
         {isPremium && pro.telephone_appel ? (
           <a
             href={`tel:${pro.telephone_appel}`}
-            className="flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-semibold text-black hover:bg-zinc-200 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-bold text-black hover:bg-zinc-200 transition-colors"
           >
-            <Phone size={16} />
-            Appeler
+            <Phone size={16} /> Appeler
           </a>
         ) : (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-zinc-500 cursor-not-allowed">
-            <Phone size={16} />
-            {/* Le backend renvoie null si pas premium, mais on gère le cas visuel */}
-            {pro.telephone_appel ? maskPhone(pro.telephone_appel) : "*******"}
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-white/5 py-2.5 text-sm text-zinc-500 cursor-not-allowed opacity-50">
+            <Lock size={14} />
+            <span>{maskPhone(pro.telephone_appel)}</span>
           </div>
         )}
 
-        {/* Bouton WhatsApp */}
+        {/* WHATSAPP */}
         {isPremium && pro.telephone_whatsapp ? (
           <a
-            href={`https://wa.me/${pro.telephone_whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
-              "Bonjour, je vous ai vu sur Senegal Contacts."
-            )}`}
+            href={`https://wa.me/${pro.telephone_whatsapp.replace(/\D/g, "")}`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 py-2.5 text-sm font-semibold hover:bg-[#25D366]/20 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 py-2.5 text-sm font-bold hover:bg-[#25D366]/20 transition-colors"
           >
-            <MessageCircle size={16} />
-            WhatsApp
+            <MessageCircle size={16} /> WhatsApp
           </a>
         ) : (
            <Link
              href={detailHref}
              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors"
            >
-             Voir profil
+             Voir détails
            </Link>
         )}
       </div>

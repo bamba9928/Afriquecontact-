@@ -4,56 +4,44 @@ from rest_framework.response import Response
 from django.db.models import Prefetch
 
 from catalog.models import Job, Location, JobCategory
-from catalog.serializers import JobSerializer, LocationSerializer, JobCategorySerializer
+from catalog.serializers import (
+    JobSerializer,
+    LocationSerializer,
+    JobCategorySerializer,
+    LocationTreeSerializer,
+)
 
 
 class JobsListView(generics.ListAPIView):
-    """
-    Liste les métiers avec support des filtres (featured) et optimisation SQL.
-    """
     permission_classes = [permissions.AllowAny]
     serializer_class = JobSerializer
 
     def get_queryset(self):
-        # Utilise select_related pour charger la catégorie et éviter le N+1
         qs = Job.objects.select_related("category").all().order_by("name")
         featured = self.request.query_params.get("featured")
-
-        # Filtre pour les métiers "les plus recherchés" [cite: 188]
         if featured in ("1", "true", "True"):
             qs = qs.filter(is_featured=True)
         return qs
 
+
 class FeaturedJobsView(generics.ListAPIView):
-    """
-    Vue dédiée pour retourner uniquement les métiers 'les plus recherchés'.
-    """
     permission_classes = [permissions.AllowAny]
     serializer_class = JobSerializer
 
     def get_queryset(self):
-        return (
-            Job.objects.select_related("category")
-            .filter(is_featured=True)
-            .order_by("name")
-        )
+        return Job.objects.select_related("category").filter(is_featured=True).order_by("name")
+
+
 class JobCategoriesTreeView(APIView):
-    """
-    Retourne la hiérarchie complète des catégories et sous-catégories.
-    """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        # Récupère uniquement les racines et pré-charge les sous-catégories
-        categories = JobCategory.objects.filter(parent__isnull=True).prefetch_related('subcategories')
+        categories = JobCategory.objects.filter(parent__isnull=True).prefetch_related("subcategories")
         serializer = JobCategorySerializer(categories, many=True)
         return Response(serializer.data)
 
 
 class LocationsListView(generics.ListAPIView):
-    """
-    Liste simple des localisations avec filtrage par parent.
-    """
     permission_classes = [permissions.AllowAny]
     serializer_class = LocationSerializer
 
@@ -67,28 +55,50 @@ class LocationsListView(generics.ListAPIView):
 
 class LocationsTreeView(APIView):
     """
-    Construit un arbre complet des localisations (Pays > Région > Ville > Quartier).
-    Optimisé en une seule requête SQL.
+    ✅ Arbre filtré pour le front:
+    REGION -> DEPARTMENT -> DISTRICT
+    (On exclut CITY et tout le reste pour éviter les doublons type "Mbacké")
     """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        rows = Location.objects.all().values("id", "name", "slug", "type", "parent_id")
-        nodes = {r["id"]: {**r, "children": []} for r in rows}
-        roots = []
+        # Pays root (si tu veux, sinon on peut ignorer et renvoyer direct les régions)
+        senegal = Location.objects.filter(type=Location.Type.COUNTRY, slug="senegal").first()
 
-        for node in nodes.values():
-            pid = node.pop("parent_id")
-            if pid and pid in nodes:
-                nodes[pid]["children"].append(node)
-            else:
-                roots.append(node)
+        districts_qs = (
+            Location.objects.filter(type=Location.Type.DISTRICT)
+            .only("id", "name", "slug", "type", "parent_id")
+            .order_by("name")
+        )
 
-        # Tri alphabétique récursif
-        def sort_tree(items):
-            items.sort(key=lambda x: x["name"].lower())
-            for it in items:
-                sort_tree(it["children"])
+        departments_qs = (
+            Location.objects.filter(type=Location.Type.DEPARTMENT)
+            .only("id", "name", "slug", "type", "parent_id")
+            .prefetch_related(
+                Prefetch(
+                    "children",
+                    queryset=districts_qs,
+                    to_attr="children_filtered",  # important pour serializer
+                )
+            )
+            .order_by("name")
+        )
 
-        sort_tree(roots)
-        return Response(roots)
+        regions_qs = (
+            Location.objects.filter(type=Location.Type.REGION)
+            .only("id", "name", "slug", "type", "parent_id")
+            .prefetch_related(
+                Prefetch(
+                    "children",
+                    queryset=departments_qs,
+                    to_attr="children_filtered",
+                )
+            )
+            .order_by("name")
+        )
+
+        if senegal:
+            regions_qs = regions_qs.filter(parent=senegal)
+
+        data = LocationTreeSerializer(regions_qs, many=True).data
+        return Response(data)

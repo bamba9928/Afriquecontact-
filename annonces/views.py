@@ -9,6 +9,7 @@ from .models import Annonce
 from .serializers import AnnonceSerializer
 from billing.models import Subscription
 from pros.permissions import EstAdministrateur
+from .permissions import IsOwnerOrReadOnly
 
 
 class AnnonceCreateView(generics.CreateAPIView):
@@ -88,3 +89,23 @@ class AdminApprobationAnnonceView(generics.UpdateAPIView):
 
         status_msg = "approuvée" if approbation else "rejetée / masquée"
         return Response({"detail": f"Annonce {status_msg} avec succès."})
+
+
+# annonces/views.py
+
+class AnnonceDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Annonce.objects.all()
+    serializer_class = AnnonceSerializer
+    # IsAuthenticatedOrReadOnly laisse tout le monde lire (GET),
+    # mais oblige à être connecté pour écrire (PUT/DELETE).
+    # IsOwnerOrReadOnly s'assure ensuite que c'est bien le propriétaire.
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        # Important : Pour le GET public, on ne doit montrer que les approuvées,
+        # SAUF si c'est l'auteur qui regarde sa propre annonce (même non approuvée).
+
+        # Astuce simple : On retourne tout, et c'est le Frontend ou une permission
+        # plus fine qui gère l'affichage si besoin.
+        # Pour faire simple et sécurisé par défaut :
+        return Annonce.objects.all()

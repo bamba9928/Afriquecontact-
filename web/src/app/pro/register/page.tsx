@@ -17,6 +17,7 @@ import {
   Search,
   Check,
   Store,
+  User
 } from "lucide-react";
 
 import {
@@ -29,7 +30,7 @@ import {
 } from "@/lib/catalog.api";
 import { registerPro, type RegisterPayload } from "@/lib/auth.api";
 
-// --- COMPOSANT SEARCHABLE SELECT (Réutilisable) ---
+// --- COMPOSANT SEARCHABLE SELECT (Amélioré) ---
 interface Option {
   id: number | string;
   label: string;
@@ -62,6 +63,7 @@ function SearchableSelect({
     [options, value]
   );
 
+  // Fermer au clic dehors
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
@@ -70,6 +72,7 @@ function SearchableSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Reset recherche à l'ouverture
   useEffect(() => {
     if (!isOpen) setSearch("");
   }, [isOpen]);
@@ -82,11 +85,13 @@ function SearchableSelect({
   return (
     <div className="relative" ref={containerRef}>
       {Icon && <Icon className="absolute left-3 top-3 h-4 w-4 text-zinc-500 pointer-events-none z-10" />}
+
+      {/* Trigger */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full cursor-pointer rounded-xl border bg-black py-2.5 pl-9 pr-8 text-sm transition-all flex items-center justify-between ${
+        className={`w-full cursor-pointer rounded-xl border bg-black py-3 pl-9 pr-8 text-sm transition-all flex items-center justify-between ${
           disabled
-            ? "opacity-50 cursor-not-allowed border-white/5"
+            ? "opacity-50 cursor-not-allowed border-white/5 bg-white/5"
             : error
             ? "border-red-500/50 hover:border-red-500"
             : isOpen
@@ -94,14 +99,15 @@ function SearchableSelect({
             : "border-white/10 hover:border-white/20"
         }`}
       >
-        <span className={selectedLabel ? "text-white" : "text-zinc-500"}>
+        <span className={selectedLabel ? "text-white" : "text-zinc-500 truncate"}>
           {selectedLabel || placeholder}
         </span>
-        <ChevronDown size={14} className={`text-zinc-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`text-zinc-500 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
+      {/* Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 mt-1 w-full rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-2 max-h-60 flex flex-col z-[100]">
+        <div className="absolute top-full left-0 mt-1 w-full rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-2 max-h-60 flex flex-col z-[100] animate-in fade-in zoom-in-95 duration-100">
           <div className="relative mb-2 shrink-0">
             <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
             <input
@@ -129,8 +135,8 @@ function SearchableSelect({
                       : "text-zinc-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <span>{opt.label}</span>
-                  {value === opt.id && <Check size={12} />}
+                  <span className="truncate">{opt.label}</span>
+                  {value === opt.id && <Check size={12} className="shrink-0" />}
                 </button>
               ))
             ) : (
@@ -140,7 +146,7 @@ function SearchableSelect({
         </div>
       )}
 
-      {error && <span className="text-xs text-red-400 mt-1 ml-1">{error}</span>}
+      {error && <span className="text-xs text-red-400 mt-1 ml-1 block">{error}</span>}
     </div>
   );
 }
@@ -157,10 +163,10 @@ type FormValues = {
   subcat_id: number; // Spécialité
   job_id: number; // Métier final
 
-  // Cascade Zones (Région -> Département -> Quartier)
+  // Cascade Zones (Région -> Ville -> Quartier)
   region_id: number;
-  department_id: number;
-  district_id: number;
+  department_id: number; // Correspond à "Ville" ou Département administratif
+  district_id: number; // Quartier
 
   telephone_appel: string;
   telephone_whatsapp: string;
@@ -173,9 +179,9 @@ export default function ProRegisterPage() {
   const [geoLoading, setGeoLoading] = useState(false);
 
   // --- 1. Chargement des données ---
-  const { data: jobsAll } = useQuery({ queryKey: ["jobs-all"], queryFn: getAllJobs });
-  const { data: catsTree } = useQuery({ queryKey: ["cats-tree"], queryFn: getCategoriesTree });
-  const { data: locsTree } = useQuery({ queryKey: ["locs-tree"], queryFn: getLocationsTree });
+  const { data: jobsAll } = useQuery({ queryKey: ["jobs-all"], queryFn: getAllJobs, staleTime: Infinity });
+  const { data: catsTree } = useQuery({ queryKey: ["cats-tree"], queryFn: getCategoriesTree, staleTime: Infinity });
+  const { data: locsTree } = useQuery({ queryKey: ["locs-tree"], queryFn: getLocationsTree, staleTime: Infinity });
 
   const {
     register,
@@ -232,7 +238,7 @@ export default function ProRegisterPage() {
       .map((j: Job) => ({ id: j.id, label: j.name }));
   }, [subCatId, jobsAll]);
 
-  // B) Zones : Région -> Département -> Quartier
+  // B) Zones : Région -> Département(Ville) -> Quartier
   const regionOptions = useMemo(
     () => (locsTree ?? []).map((r: LocationNode) => ({ id: r.id, label: r.name })),
     [locsTree]
@@ -254,150 +260,158 @@ export default function ProRegisterPage() {
   }, [regionId, departmentId, locsTree]);
 
   // --- 3. Reset cascade ---
+  // Reset quand le parent change
   useEffect(() => {
-    setValue("subcat_id", 0, { shouldDirty: true, shouldValidate: true });
-    setValue("job_id", 0, { shouldDirty: true, shouldValidate: true });
+    if (subCatId !== 0) setValue("subcat_id", 0);
+    if (jobId !== 0) setValue("job_id", 0);
   }, [catId, setValue]);
 
   useEffect(() => {
-    setValue("job_id", 0, { shouldDirty: true, shouldValidate: true });
+    if (jobId !== 0) setValue("job_id", 0);
   }, [subCatId, setValue]);
 
   useEffect(() => {
-    setValue("department_id", 0, { shouldDirty: true, shouldValidate: true });
-    setValue("district_id", 0, { shouldDirty: true, shouldValidate: true });
+    if (departmentId !== 0) setValue("department_id", 0);
+    if (districtId !== 0) setValue("district_id", 0);
   }, [regionId, setValue]);
 
   useEffect(() => {
-    setValue("district_id", 0, { shouldDirty: true, shouldValidate: true });
+    if (districtId !== 0) setValue("district_id", 0);
   }, [departmentId, setValue]);
 
   // Auto-fill téléphone
   useEffect(() => {
-    if (!phone) return;
-    if (!watch("telephone_appel")) setValue("telephone_appel", phone);
-    if (!watch("telephone_whatsapp")) setValue("telephone_whatsapp", phone);
-  }, [phone, setValue, watch]);
+    if (phone) {
+      if (!watch("telephone_appel")) setValue("telephone_appel", phone);
+      if (!watch("telephone_whatsapp")) setValue("telephone_whatsapp", phone);
+    }
+  }, [phone, setValue]);
 
   // --- 4. Submit ---
   const regMut = useMutation({
     mutationFn: (data: RegisterPayload) => registerPro(data),
     onSuccess: (res) => {
-      toast.success("Inscription réussie !");
-      router.push(`/pro/verify?phone=${encodeURIComponent(res.phone)}`);
+      toast.success("Compte créé avec succès !");
+      // Redirection vers vérification WhatsApp (ou Login si désactivé)
+      if (res.phone) {
+         router.push(`/pro/verify?phone=${encodeURIComponent(res.phone)}`);
+      } else {
+         router.push("/pro/login");
+      }
     },
-    onError: (err: any) => toast.error(err.response?.data?.detail || "Erreur inscription"),
+    onError: (err: any) => {
+      console.error(err);
+      const msg = err.response?.data?.detail || "Erreur lors de l'inscription. Vérifiez vos données.";
+      toast.error(msg);
+    },
   });
 
   const onSubmit = (v: FormValues) => {
-    if (!v.job_id) return toast.error("Le métier est requis");
-    if (!v.district_id) return toast.error("Le quartier est requis");
+    if (!v.job_id) return toast.error("Veuillez sélectionner votre métier précis.");
+    if (!v.district_id) return toast.error("Veuillez sélectionner votre quartier.");
 
     regMut.mutate({
       phone: v.phone,
       password: v.password,
       nom_entreprise: v.nom_entreprise,
       metier_id: Number(v.job_id),
-      zone_id: Number(v.district_id), // quartier final
-      telephone_appel: v.telephone_appel,
-      telephone_whatsapp: v.telephone_whatsapp,
+      zone_id: Number(v.district_id), // Le quartier est le niveau le plus précis
+      telephone_appel: v.telephone_appel || v.phone,
+      telephone_whatsapp: v.telephone_whatsapp || v.phone,
       latitude: v.latitude ?? null,
       longitude: v.longitude ?? null,
-      description: "",
+      description: "", // Sera rempli dans le profil plus tard
     });
   };
 
   const askGeo = () => {
-    if (!navigator.geolocation) return toast.error("Géolocalisation non supportée.");
+    if (!navigator.geolocation) return toast.error("Géolocalisation non supportée par ce navigateur.");
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setValue("latitude", pos.coords.latitude);
         setValue("longitude", pos.coords.longitude);
-        toast.success("Position capturée");
+        toast.success("Position GPS enregistrée !");
         setGeoLoading(false);
       },
-      () => {
-        toast.error("Erreur position");
+      (err) => {
+        console.error(err);
+        toast.error("Impossible d'obtenir la position. Vérifiez vos autorisations.");
         setGeoLoading(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Devenir Partenaire</h1>
-        <p className="text-sm text-zinc-400">Remplissez les détails pour être visible sur ContactAfrique.</p>
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Créer un compte Pro</h1>
+        <p className="text-sm text-zinc-400">Rejoignez l'annuaire de référence au Sénégal.</p>
       </div>
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-5 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 backdrop-blur-sm shadow-xl"
+        className="space-y-6 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 md:p-8 backdrop-blur-sm shadow-xl"
       >
-        {/* Champs cachés pour RHF (assure que les selects sont soumis/validés) */}
-        <input type="hidden" {...register("cat_id", { valueAsNumber: true, required: true })} />
-        <input type="hidden" {...register("subcat_id", { valueAsNumber: true, required: true })} />
-        <input type="hidden" {...register("job_id", { valueAsNumber: true, required: true })} />
-        <input type="hidden" {...register("region_id", { valueAsNumber: true, required: true })} />
-        <input type="hidden" {...register("department_id", { valueAsNumber: true, required: true })} />
-        <input type="hidden" {...register("district_id", { valueAsNumber: true, required: true })} />
-
         {/* IDENTIFICATION */}
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">Identification</h3>
+          <h3 className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3 pb-2 border-b border-white/5">
+             <User size={14} /> Identification
+          </h3>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Nom Commercial</label>
+            <label className="text-xs font-medium text-zinc-400">Nom de l'entreprise / Prestataire *</label>
             <div className="relative">
-              <Store className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+              <Store className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
               <input
                 {...register("nom_entreprise", { required: true })}
                 placeholder="Ex: Atelier Mame Diarra"
-                className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-3 text-sm text-white outline-none focus:border-indigo-500 transition-colors placeholder:text-zinc-600"
               />
             </div>
+            {errors.nom_entreprise && <span className="text-xs text-red-400">Ce champ est requis</span>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Téléphone (Login)</label>
+              <label className="text-xs font-medium text-zinc-400">Téléphone (Login) *</label>
               <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   type="tel"
-                  {...register("phone", { required: true })}
-                  placeholder="77..."
-                  className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                  {...register("phone", { required: true, minLength: 9 })}
+                  placeholder="77 000 00 00"
+                  className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-3 text-sm text-white outline-none focus:border-indigo-500 transition-colors placeholder:text-zinc-600"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Mot de passe</label>
+              <label className="text-xs font-medium text-zinc-400">Mot de passe *</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   type="password"
                   {...register("password", { required: true, minLength: 6 })}
                   placeholder="••••••"
-                  className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                  className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-3 py-3 text-sm text-white outline-none focus:border-indigo-500 transition-colors placeholder:text-zinc-600"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <hr className="border-white/5" />
-
-        {/* MÉTIER (CASCADE 3 NIVEAUX) */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">Activité</h3>
+        {/* MÉTIER (CASCADE) */}
+        <div className="space-y-4 pt-2">
+          <h3 className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 pb-2 border-b border-white/5">
+             <Briefcase size={14} /> Votre Activité
+          </h3>
 
           <div className="space-y-1">
             <label className="text-xs text-zinc-400">Secteur d'activité</label>
             <SearchableSelect
               icon={Briefcase}
-              placeholder="Choisir secteur..."
+              placeholder="Sélectionner un secteur..."
               options={categoryOptions}
               value={catId || undefined}
               onChange={(v) => setValue("cat_id", Number(v), { shouldDirty: true, shouldValidate: true })}
@@ -405,10 +419,10 @@ export default function ProRegisterPage() {
             />
           </div>
 
-          <div className={`space-y-1 transition-all ${!catId ? "opacity-50 pointer-events-none" : ""}`}>
-            <label className="text-xs text-zinc-400">Spécialisation</label>
+          <div className={`space-y-1 transition-all duration-300 ${!catId ? "opacity-50 pointer-events-none grayscale" : ""}`}>
+            <label className="text-xs text-zinc-400">Catégorie</label>
             <SearchableSelect
-              placeholder={!catId ? "Choisir un secteur d'abord" : "Choisir spécialité..."}
+              placeholder="Sélectionner une catégorie..."
               options={subCategoryOptions}
               value={subCatId || undefined}
               onChange={(v) => setValue("subcat_id", Number(v), { shouldDirty: true, shouldValidate: true })}
@@ -417,10 +431,10 @@ export default function ProRegisterPage() {
             />
           </div>
 
-          <div className={`space-y-1 transition-all ${!subCatId ? "opacity-50 pointer-events-none" : ""}`}>
-            <label className="text-xs text-zinc-400">Métier Précis</label>
+          <div className={`space-y-1 transition-all duration-300 ${!subCatId ? "opacity-50 pointer-events-none grayscale" : ""}`}>
+            <label className="text-xs text-zinc-400 font-bold text-white">Métier Précis *</label>
             <SearchableSelect
-              placeholder={!subCatId ? "Choisir une spécialité d'abord" : "Rechercher votre métier..."}
+              placeholder="Sélectionner votre métier..."
               options={jobOptions}
               value={jobId || undefined}
               onChange={(v) => setValue("job_id", Number(v), { shouldDirty: true, shouldValidate: true })}
@@ -430,13 +444,13 @@ export default function ProRegisterPage() {
           </div>
         </div>
 
-        <hr className="border-white/5" />
+        {/* LOCALISATION (CASCADE) */}
+        <div className="space-y-4 pt-2">
+          <h3 className="flex items-center gap-2 text-xs font-bold text-orange-400 uppercase tracking-wider mb-3 pb-2 border-b border-white/5">
+             <MapPin size={14} /> Localisation
+          </h3>
 
-        {/* ZONE (CASCADE 3 NIVEAUX) */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-2">Localisation</h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-zinc-400">Région</label>
               <SearchableSelect
@@ -449,48 +463,54 @@ export default function ProRegisterPage() {
               />
             </div>
 
-            <div className={`space-y-1 transition-all ${!regionId ? "opacity-50 pointer-events-none" : ""}`}>
-              <label className="text-xs text-zinc-400">Département</label>
-              <SearchableSelect
-                placeholder={!regionId ? "..." : "Département..."}
-                options={departmentOptions}
-                value={departmentId || undefined}
-                onChange={(v) => setValue("department_id", Number(v), { shouldDirty: true, shouldValidate: true })}
-                disabled={!regionId}
-                error={errors.department_id ? "Requis" : undefined}
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div className={`space-y-1 transition-all duration-300 ${!regionId ? "opacity-50 pointer-events-none" : ""}`}>
+                <label className="text-xs text-zinc-400">Ville / Département</label>
+                <SearchableSelect
+                    placeholder="Ville..."
+                    options={departmentOptions}
+                    value={departmentId || undefined}
+                    onChange={(v) => setValue("department_id", Number(v), { shouldDirty: true, shouldValidate: true })}
+                    disabled={!regionId}
+                    error={errors.department_id ? "Requis" : undefined}
+                />
+                </div>
 
-            <div className={`space-y-1 transition-all ${!departmentId ? "opacity-50 pointer-events-none" : ""}`}>
-              <label className="text-xs text-zinc-400">Quartier</label>
-              <SearchableSelect
-                placeholder={!departmentId ? "..." : "Quartier..."}
-                options={districtOptions}
-                value={districtId || undefined}
-                onChange={(v) => setValue("district_id", Number(v), { shouldDirty: true, shouldValidate: true })}
-                disabled={!departmentId}
-                error={errors.district_id ? "Requis" : undefined}
-              />
+                <div className={`space-y-1 transition-all duration-300 ${!departmentId ? "opacity-50 pointer-events-none" : ""}`}>
+                <label className="text-xs text-zinc-400 font-bold text-white">Quartier *</label>
+                <SearchableSelect
+                    placeholder="Quartier..."
+                    options={districtOptions}
+                    value={districtId || undefined}
+                    onChange={(v) => setValue("district_id", Number(v), { shouldDirty: true, shouldValidate: true })}
+                    disabled={!departmentId}
+                    error={errors.district_id ? "Requis" : undefined}
+                />
+                </div>
             </div>
           </div>
 
           <button
             type="button"
             onClick={askGeo}
-            disabled={geoLoading}
-            className="flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors bg-white/5 px-3 py-2 rounded-lg w-full justify-center border border-white/5 hover:bg-white/10"
+            disabled={geoLoading || !!watch("latitude")}
+            className={`flex items-center justify-center gap-2 text-xs font-medium rounded-xl w-full py-3 border transition-all ${
+                watch("latitude")
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 cursor-default"
+                : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10 hover:text-white"
+            }`}
           >
             {geoLoading ? <Loader2 size={14} className="animate-spin" /> : <LocateFixed size={14} />}
-            {watch("latitude") ? "Position GPS validée ✓" : "Ajouter ma position GPS (Recommandé)"}
+            {watch("latitude") ? "Position GPS validée ✓" : "Utiliser ma position GPS actuelle"}
           </button>
         </div>
 
         <button
           type="submit"
-          disabled={regMut.isPending}
-          className="w-full mt-4 flex justify-center items-center gap-2 rounded-xl bg-white text-black py-3.5 font-bold hover:bg-zinc-200 transition-colors disabled:opacity-60"
+          disabled={regMut.isPending || geoLoading}
+          className="w-full mt-4 flex justify-center items-center gap-2 rounded-xl bg-white text-black py-4 font-bold hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {regMut.isPending ? <Loader2 className="animate-spin" /> : "Créer mon compte Pro"}
+          {regMut.isPending ? <Loader2 className="animate-spin" /> : "S'inscrire maintenant"}
         </button>
       </form>
     </main>

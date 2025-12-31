@@ -3,21 +3,22 @@ import { api } from "./api";
 import { unwrapList } from "./paginate";
 import type { Publicite } from "./types";
 
-// 1. Récupérer les pubs (Votre code actuel)
+// 1. Récupérer les publicités actives
 export async function getAds(): Promise<Publicite[]> {
+  // Appelle PubliciteListView (GET /api/ads/)
   const { data } = await api.get("/api/ads/");
   return unwrapList<Publicite>(data);
 }
 
-// 2. Enregistrer un clic (Optionnel mais recommandé)
-// À appeler lors du onClick sur la bannière
+// 2. Enregistrer un clic sur une pub
 export async function trackAdClick(adId: number): Promise<void> {
-  // Vérifiez si votre backend a une route dédiée, souvent : /api/ads/{id}/click/
-  // C'est un appel "fire-and-forget" (on n'attend pas forcément la réponse pour rediriger)
+  // ATTENTION : Cet endpoint nécessite une vue dédiée côté Django (ex: PubliciteClickView)
+  // Actuellement, ads/urls.py ne définit pas de route ".../click/".
+  // On capture l'erreur pour ne pas interrompre la navigation de l'utilisateur.
   try {
     await api.post(`/api/ads/${adId}/click/`);
   } catch (err) {
-    // On ignore silencieusement les erreurs de tracking pour ne pas bloquer l'utilisateur
-    console.error("Erreur tracking pub", err);
+    // On log en warn plutôt qu'en error pour ne pas polluer la console inutilement
+    console.warn(`Tracking pub ${adId} échoué (Endpoint backend non disponible)`);
   }
 }

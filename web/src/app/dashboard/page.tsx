@@ -1,30 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/store/auth";
-import { LogOut, User, ImageIcon, Activity, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/lib/auth.store";
+import { getProMe } from "@/lib/pros.api";
+import { billingMe } from "@/lib/billing.api";
+
+import {
+  LogOut, User, Activity, Loader2, CreditCard,
+  Megaphone, ExternalLink, ShieldCheck, AlertTriangle
+} from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { accessToken, logout } = useAuth();
-
-  // État pour s'assurer que le composant est monté (évite les erreurs d'hydratation)
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const { accessToken, logout } = useAuthStore();
 
   // Protection de la route
   useEffect(() => {
-    if (isMounted && !accessToken) {
+    if (!accessToken) {
       router.replace("/pro/login");
     }
-  }, [accessToken, isMounted, router]);
+  }, [accessToken, router]);
 
-  // Tant que l'auth n'est pas vérifiée, on affiche un loader ou rien
-  if (!isMounted || !accessToken) {
+  // Récupération des données Pro & Billing
+  const { data: pro, isLoading: proLoading } = useQuery({
+    queryKey: ["pro-me"],
+    queryFn: getProMe,
+    enabled: !!accessToken,
+  });
+
+  const { data: billing, isLoading: billingLoading } = useQuery({
+    queryKey: ["billing-me"],
+    queryFn: billingMe,
+    enabled: !!accessToken,
+  });
+
+  const isLoading = proLoading || billingLoading;
+  const isPremium = !!(billing?.is_active ?? billing?.active);
+  const isOnline = pro?.statut_en_ligne === "ONLINE";
+  const isVisible = pro?.est_publie;
+
+  if (!accessToken) return null;
+
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
@@ -33,70 +53,105 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="p-6 space-y-8">
-      {/* En-tête */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-          <p className="text-zinc-400">Gérez votre activité et votre visibilité.</p>
+    <main className="mx-auto max-w-5xl p-6 space-y-8">
+
+      {/* EN-TÊTE AVEC STATUT GLOBAL */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between rounded-3xl bg-zinc-900/50 p-6 border border-white/10">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Bonjour, {pro?.nom_entreprise || "Partenaire"} 👋
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+             {/* Badge Premium */}
+             <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isPremium ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : "bg-zinc-800 border-white/10 text-zinc-400"}`}>
+                {isPremium ? <ShieldCheck size={14}/> : <AlertTriangle size={14}/>}
+                {isPremium ? "Compte Premium Actif" : "Mode Gratuit"}
+             </span>
+
+             {/* Badge Visibilité */}
+             <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${isVisible ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
+                <Activity size={14}/>
+                {isVisible ? "Profil Public Visible" : "Profil Masqué"}
+             </span>
+          </div>
         </div>
 
         <button
-          onClick={() => {
-            logout();
-            router.replace("/pro/login"); // Redirection explicite après logout
-          }}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all"
+          onClick={() => { logout(); router.replace("/pro/login"); }}
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all self-start"
         >
           <LogOut size={16} />
-          Se déconnecter
+          Déconnexion
         </button>
       </div>
 
-      {/* Grille des widgets */}
+      {/* GRILLE D'ACTIONS */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
-        {/* Widget 1: Statut */}
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
-          <div className="flex items-center gap-3 text-emerald-400 mb-4">
-            <Activity size={24} />
-            <h3 className="font-semibold text-white">Activité</h3>
-          </div>
-          <p className="text-sm text-zinc-400">Votre compte est actif et visible sur l'annuaire.</p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            En ligne
-          </div>
-        </div>
-
-        {/* Widget 2: Profil (Futur) */}
-        <div className="group relative rounded-2xl border border-white/10 bg-zinc-900/50 p-6 hover:bg-zinc-900 transition-colors cursor-pointer">
-          <div className="flex items-center gap-3 text-blue-400 mb-4">
+        {/* 1. Mon Profil (Edition + Galerie) */}
+        <Link href="/pro/profil" className="group relative rounded-2xl border border-white/10 bg-zinc-900/30 p-6 hover:bg-zinc-900 hover:border-indigo-500/30 transition-all">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
             <User size={24} />
-            <h3 className="font-semibold text-white">Mon Profil Pro</h3>
           </div>
-          <p className="text-sm text-zinc-400">Modifiez vos informations, horaires et contacts.</p>
-          <span className="absolute bottom-6 right-6 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-            Modifier &rarr;
-          </span>
-        </div>
+          <h3 className="text-lg font-bold text-white mb-2">Mon Profil & Galerie</h3>
+          <p className="text-sm text-zinc-400 mb-6">
+            Modifiez vos coordonnées, gérez votre galerie photos/vidéos et mettez à jour votre CV.
+          </p>
+          <div className="flex items-center text-xs font-bold text-blue-400 group-hover:translate-x-1 transition-transform">
+            Gérer mon profil &rarr;
+          </div>
+        </Link>
 
-        {/* Widget 3: Galerie (Futur) */}
-        <div className="group relative rounded-2xl border border-white/10 bg-zinc-900/50 p-6 hover:bg-zinc-900 transition-colors cursor-pointer">
-          <div className="flex items-center gap-3 text-purple-400 mb-4">
-            <ImageIcon size={24} />
-            <h3 className="font-semibold text-white">Ma Galerie</h3>
+        {/* 2. Annonces (Offres d'emploi) */}
+        <Link href="/pro/annonces" className="group relative rounded-2xl border border-white/10 bg-zinc-900/30 p-6 hover:bg-zinc-900 hover:border-emerald-500/30 transition-all">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+            <Megaphone size={24} />
           </div>
-          <p className="text-sm text-zinc-400">Ajoutez des photos de vos réalisations.</p>
-          <span className="absolute bottom-6 right-6 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-            Gérer &rarr;
-          </span>
-        </div>
+          <h3 className="text-lg font-bold text-white mb-2">Mes Annonces</h3>
+          <p className="text-sm text-zinc-400 mb-6">
+            Publiez des offres d'emploi ou consultez les demandes disponibles dans votre secteur.
+          </p>
+          <div className="flex items-center text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
+            Gérer mes annonces &rarr;
+          </div>
+        </Link>
+
+        {/* 3. Abonnement Premium */}
+        <Link href="/pro/premium" className="group relative rounded-2xl border border-white/10 bg-zinc-900/30 p-6 hover:bg-zinc-900 hover:border-amber-500/30 transition-all">
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+            <CreditCard size={24} />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">Abonnement</h3>
+          <p className="text-sm text-zinc-400 mb-6">
+            {isPremium
+              ? `Abonnement actif. Expire dans ${billing?.days_left ?? "?"} jours.`
+              : "Activez Premium pour débloquer les appels et WhatsApp."}
+          </p>
+          <div className="flex items-center text-xs font-bold text-amber-400 group-hover:translate-x-1 transition-transform">
+            {isPremium ? "Voir détails" : "Passer Premium"} &rarr;
+          </div>
+        </Link>
 
       </div>
+
+      {/* LIEN RAPIDE : VOIR SA FICHE PUBLIQUE */}
+      {pro?.slug && (
+        <div className="rounded-2xl border border-white/5 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-1">
+          <Link href={`/pros/${pro.slug}`} target="_blank" className="flex items-center justify-between rounded-xl bg-black/40 p-4 hover:bg-black/20 transition-colors">
+             <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/20 text-indigo-300 rounded-lg">
+                   <ExternalLink size={20}/>
+                </div>
+                <div>
+                   <div className="font-semibold text-white">Voir ma fiche publique</div>
+                   <div className="text-xs text-zinc-400">Aperçu de ce que voient vos clients</div>
+                </div>
+             </div>
+             <div className="text-indigo-400 text-sm font-medium">Ouvrir &rarr;</div>
+          </Link>
+        </div>
+      )}
+
     </main>
   );
 }

@@ -12,18 +12,14 @@ from catalog.serializers import JobSerializer, LocationSerializer
 
 
 class MediaProSerializer(serializers.ModelSerializer):
-    """
-    Serializer pour gérer les photos, vidéos et CV dans la galerie du pro.
-    """
-
     MEDIA_RULES = {
         "PHOTO": {
-            "max_size": 5 * 1024 * 1024,  # 5 Mo
+            "max_size": 5 * 1024 * 1024,
             "extensions": {".jpg", ".jpeg", ".png", ".webp"},
             "content_types": {"image/jpeg", "image/png", "image/webp"},
         },
         "VIDEO": {
-            "max_size": 50 * 1024 * 1024,  # 50 Mo
+            "max_size": 50 * 1024 * 1024,
             "extensions": {".mp4", ".mov", ".avi", ".mkv"},
             "content_types": {
                 "video/mp4",
@@ -33,7 +29,7 @@ class MediaProSerializer(serializers.ModelSerializer):
             },
         },
         "CV": {
-            "max_size": 3 * 1024 * 1024,  # 3 Mo
+            "max_size": 3 * 1024 * 1024,
             "extensions": {".pdf"},
             "content_types": {"application/pdf"},
         },
@@ -51,21 +47,14 @@ class MediaProSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        """
-        Règle: est_principal uniquement pour les photos (image de couverture).
-        """
         type_media = (attrs.get("type_media") or getattr(self.instance, "type_media", None) or "").upper()
         est_principal = attrs.get("est_principal", getattr(self.instance, "est_principal", False))
-
         if est_principal and type_media and type_media != "PHOTO":
             raise serializers.ValidationError({"est_principal": "Le média principal doit être une PHOTO."})
         return attrs
 
     def validate_fichier(self, value):
-        raw_type = (
-            self.initial_data.get("type_media")
-            or (getattr(self.instance, "type_media", None) if self.instance else None)
-        )
+        raw_type = self.initial_data.get("type_media") or (getattr(self.instance, "type_media", None) if self.instance else None)
         if not raw_type:
             raise serializers.ValidationError("Le champ 'type_media' est requis.")
 
@@ -74,18 +63,15 @@ class MediaProSerializer(serializers.ModelSerializer):
         if not rules:
             raise serializers.ValidationError(f"Type de média '{raw_type}' non supporté.")
 
-        # Taille
         size = getattr(value, "size", None)
         if size is not None and size > rules["max_size"]:
             max_mb = rules["max_size"] / (1024 * 1024)
             raise serializers.ValidationError(f"Fichier trop volumineux (max {max_mb:.0f} Mo).")
 
-        # Extension
         ext = os.path.splitext(value.name)[1].lower()
         if ext not in rules["extensions"]:
             raise serializers.ValidationError(f"Extension {ext} non autorisée.")
 
-        # MIME (si dispo, sinon guess par extension)
         content_type = getattr(value, "content_type", None)
         if not content_type:
             guessed, _ = mimetypes.guess_type(value.name)
@@ -97,48 +83,31 @@ class MediaProSerializer(serializers.ModelSerializer):
         return value
 
     def _get_pro_from_save_kwargs(self, validated_data):
-        """
-        Supporte:
-        - serializer.save(professionnel=...) (perform_create)
-        - champ professionnel dans validated_data
-        """
         pro = validated_data.get("professionnel")
         if pro:
             return pro
-
         req = self.context.get("request")
         if req and getattr(req.user, "is_authenticated", False) and hasattr(req.user, "pro_profile"):
             return req.user.pro_profile
-
         return None
 
     @transaction.atomic
     def create(self, validated_data):
         pro = self._get_pro_from_save_kwargs(validated_data)
-
         if pro and validated_data.get("est_principal") is True:
             MediaPro.objects.filter(professionnel=pro, est_principal=True).update(est_principal=False)
-
         if pro and "professionnel" not in validated_data:
             validated_data["professionnel"] = pro
-
         return super().create(validated_data)
 
     @transaction.atomic
     def update(self, instance, validated_data):
         if validated_data.get("est_principal") is True:
-            MediaPro.objects.filter(
-                professionnel=instance.professionnel,
-                est_principal=True,
-            ).exclude(pk=instance.pk).update(est_principal=False)
-
+            MediaPro.objects.filter(professionnel=instance.professionnel, est_principal=True).exclude(pk=instance.pk).update(est_principal=False)
         return super().update(instance, validated_data)
 
 
 class ProMeSerializer(serializers.ModelSerializer):
-    """
-    Serializer complet pour la gestion du profil par le professionnel.
-    """
     telephone_utilisateur = serializers.CharField(source="utilisateur.phone", read_only=True)
     whatsapp_verifie = serializers.BooleanField(source="utilisateur.whatsapp_verified", read_only=True)
 
@@ -175,11 +144,7 @@ class ProMeSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "cree_le", "mis_a_jour_le", "est_publie", "note_moyenne", "nombre_avis"]
 
 
-class ProPublicSerializer(serializers.ModelSerializer):
-    """
-    Public: téléphones masqués si paiement non à jour (est_publie=False).
-    Exception: le pro voit toujours ses propres numéros.
-    """
+class _ProPublicBase(serializers.ModelSerializer):
     telephone_appel = serializers.SerializerMethodField()
     telephone_whatsapp = serializers.SerializerMethodField()
     is_contactable = serializers.SerializerMethodField()
@@ -187,27 +152,13 @@ class ProPublicSerializer(serializers.ModelSerializer):
     metier_name = serializers.CharField(source="metier.name", read_only=True)
     zone_name = serializers.CharField(source="zone_geographique.name", read_only=True)
 
+    whatsapp_verifie = serializers.BooleanField(source="utilisateur.whatsapp_verified", read_only=True)
     photo_couverture = serializers.SerializerMethodField()
 
-    class Meta:
-        model = ProfilProfessionnel
-        fields = [
-            "id",
-            "slug",
-            "nom_entreprise",
-            "metier_name",
-            "zone_name",
-            "description",
-            "telephone_appel",
-            "telephone_whatsapp",
-            "is_contactable",
-            "avatar",
-            "photo_couverture",
-            "statut_en_ligne",
-            "latitude",
-            "longitude",
-            "note_moyenne",
-        ]
+    distance_km = serializers.SerializerMethodField()
+
+    def get_distance_km(self, obj):
+        return getattr(obj, "distance_km", None)
 
     def _is_owner(self, obj) -> bool:
         req = self.context.get("request")
@@ -215,18 +166,15 @@ class ProPublicSerializer(serializers.ModelSerializer):
         return bool(req and user and getattr(user, "is_authenticated", False) and user == obj.utilisateur)
 
     def _can_show_contacts(self, obj) -> bool:
-        # Règle business: est_publie=False => paiement non à jour => contacts masqués
         return self._is_owner(obj) or bool(getattr(obj, "est_publie", False))
 
     def get_is_contactable(self, obj) -> bool:
-        # True si cette réponse doit exposer les contacts (owner ou est_publie=True)
         return self._can_show_contacts(obj)
 
     def get_telephone_appel(self, obj) -> Optional[str]:
         return obj.telephone_appel if self._can_show_contacts(obj) else None
 
     def get_telephone_whatsapp(self, obj) -> Optional[str]:
-        # None => le bouton WhatsApp ne s'affiche pas côté UI
         return obj.telephone_whatsapp if self._can_show_contacts(obj) else None
 
     def get_photo_couverture(self, obj) -> Optional[str]:
@@ -234,8 +182,6 @@ class ProPublicSerializer(serializers.ModelSerializer):
         if pre is not None:
             return pre
 
-        # IMPORTANT: .filter() ignore le cache prefetch -> risque N+1.
-        # On utilise .all() pour exploiter le prefetch côté listing.
         try:
             medias = obj.media.all()
         except Exception:
@@ -256,11 +202,62 @@ class ProPublicSerializer(serializers.ModelSerializer):
             return None
 
 
+class ProPublicSerializer(_ProPublicBase):
+    # DÉTAIL: galerie complète
+    medias = MediaProSerializer(source="media", many=True, read_only=True)
+
+    class Meta:
+        model = ProfilProfessionnel
+        fields = [
+            "id",
+            "slug",
+            "nom_entreprise",
+            "metier_name",
+            "zone_name",
+            "description",
+            "telephone_appel",
+            "telephone_whatsapp",
+            "is_contactable",
+            "avatar",
+            "photo_couverture",
+            "medias",
+            "statut_en_ligne",
+            "whatsapp_verifie",
+            "latitude",
+            "longitude",
+            "distance_km",
+            "note_moyenne",
+        ]
+
+
+class ProPublicListSerializer(_ProPublicBase):
+    # LISTE: pas de medias complets
+    class Meta:
+        model = ProfilProfessionnel
+        fields = [
+            "id",
+            "slug",
+            "nom_entreprise",
+            "metier_name",
+            "zone_name",
+            "description",
+            "telephone_appel",
+            "telephone_whatsapp",
+            "is_contactable",
+            "avatar",
+            "photo_couverture",
+            "statut_en_ligne",
+            "whatsapp_verifie",
+            "latitude",
+            "longitude",
+            "distance_km",
+            "note_moyenne",
+        ]
+
+
 class ContactFavoriSerializer(serializers.ModelSerializer):
-    """
-    Serializer pour l'onglet 'Mes Contacts'.
-    """
-    professionnel_details = ProPublicSerializer(source="professionnel", read_only=True)
+    # ✅ Favoris léger
+    professionnel_details = ProPublicListSerializer(source="professionnel", read_only=True)
 
     class Meta:
         model = ContactFavori

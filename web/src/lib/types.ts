@@ -1,125 +1,174 @@
-// src/lib/types.ts
+// web/src/lib/types.ts
+
+import type { Job, Location } from "./catalog.api";
 
 // --- 1. Utilitaires Génériques ---
 
-/**
- * Structure standard de pagination Django Rest Framework (PageNumberPagination)
- */
-export interface PaginatedResponse<T> {
+export interface Paginated<T> {
   count: number;
   next: string | null;
   previous: string | null;
   results: T[];
 }
-// Alias raccourci souvent utilisé
-export type Paginated<T> = PaginatedResponse<T>;
 
+// --- 2. Profils Professionnels ---
+// Aligné sur Django (MediaProSerializer / ProPublicListSerializer / ProPublicSerializer / ProMeSerializer)
 
-// --- 2. Entités de Base (Référentiels) ---
-
-export type Job = {
+export type ProMedia = {
   id: number;
-  nom?: string;
-  name?: string; // Le backend DRF renvoie souvent 'name' par défaut
-  slug?: string;
+  type_media: "PHOTO" | "VIDEO" | "CV";
+  fichier: string;
+  est_principal: boolean;
+  cree_le: string; // ISO datetime
 };
 
-export type Location = {
-  id: number;
-  nom?: string;
-  name?: string;
-  type?: string;
-  parent?: number | null;
-};
-
-
-// --- 3. Entités Métier (Profils) ---
-
-/**
- * Correspond exactement à ProPublicSerializer côté Django
- */
-export type ProPublic = {
+export type ProPublicBase = {
   id: number;
   slug: string;
-  nom_entreprise: string; // Backend: nom_entreprise (pas nom_commercial)
+  nom_entreprise: string;
 
-  // Champs aplatis (read_only) provenant du serializer
   metier_name: string;
   zone_name: string;
 
-  description?: string;
+  description: string;
+  avatar: string | null;
 
-  // Contacts (peuvent être null si is_contactable est false)
-  telephone_appel?: string | null;
-  telephone_whatsapp?: string | null;
-  is_contactable: boolean; // Calculé par le backend (paiement ok ou propriétaire)
+  telephone_appel: string | null;
+  telephone_whatsapp: string | null;
+  is_contactable: boolean;
 
-  avatar?: string | null;
-  photo_couverture?: string | null; // Calculé par le backend (Média principal)
+  statut_en_ligne: "ONLINE" | "OFFLINE";
+  whatsapp_verifie: boolean;
 
-  statut_en_ligne: "ONLINE" | "OFFLINE"; // Enum strict
+  latitude: number | null;
+  longitude: number | null;
+  note_moyenne: number | null;
 
-  latitude?: number | string | null;
-  longitude?: number | string | null;
-  note_moyenne?: number | string;
+  // annoté uniquement si lat/lng fournis côté API
+  distance_km?: number | null;
 
-  // Champ calculé optionnel ajouté par la vue "Recherche" si lat/lng fournis
-  distance_km?: number;
+  photo_couverture: string | null;
 };
 
-/**
- * Correspond à ContactFavoriSerializer
- */
+// LIST (RechercheProView) : pas de galerie complète
+export type ProPublicList = ProPublicBase;
+
+// DETAIL (ProPublicDetailView) : galerie complète
+export type ProPublicDetail = ProPublicBase & {
+  medias: ProMedia[];
+};
+
+// Favoris: si backend renvoie ProPublicListSerializer dans professionnel_details
 export type FavoriItem = {
   id: number;
-  professionnel: number; // ID du pro
-  professionnel_details: ProPublic; // Objet pro complet imbriqué
+  professionnel: number;
+  professionnel_details: ProPublicList;
   cree_le: string;
 };
 
+// /me (ProMeSerializer) : structure privée d’édition
+export type ProMe = {
+  id: number;
+  telephone_utilisateur: string;
+  whatsapp_verifie: boolean;
 
-// --- 4. Publicité & Annonces ---
+  nom_entreprise: string;
+
+  metier: number;
+  metier_details: Job;
+
+  zone_geographique: number;
+  zone_details: Location;
+
+  zones_intervention: number[];
+  intervention_details: Location[];
+
+  description: string;
+  telephone_appel: string;
+  telephone_whatsapp: string;
+
+  avatar: string | null;
+  statut_en_ligne: "ONLINE" | "OFFLINE";
+  est_publie: boolean;
+
+  latitude: number | null;
+  longitude: number | null;
+
+  note_moyenne: number | null;
+  nombre_avis: number;
+
+  cree_le: string;
+  mis_a_jour_le: string;
+};
+
+// --- 3. Annonces (Offres & Demandes) ---
+
+export type AnnonceType = "OFFRE" | "DEMANDE";
+
+export type Annonce = {
+  id: number;
+  titre: string;
+  slug: string;
+  type: AnnonceType;
+
+  description: string;
+  adresse_precise: string;
+  telephone: string;
+
+  // IDs (écriture)
+  categorie: number;
+  zone_geographique: number;
+
+  // Objets détaillés (lecture, read_only)
+  categorie_details?: Job;
+  zone_details?: Location;
+
+  // Méta-données
+  auteur_phone?: string;
+  est_mon_annonce: boolean;
+  est_approuvee: boolean;
+  nb_vues: number;
+  cree_le: string;
+};
+
+export type AnnoncePayload = {
+  type: AnnonceType;
+  titre: string;
+  description: string;
+  zone_geographique: number;
+  adresse_precise: string;
+  telephone: string;
+  categorie: number;
+};
+
+// --- 4. Publicités (Ads) ---
 
 export type Publicite = {
   id: number;
   titre: string;
-  fichier_url?: string | null;
+  fichier_url: string;
   lien_redirection?: string | null;
   telephone_appel?: string | null;
   telephone_whatsapp?: string | null;
-  est_visible?: boolean;
+  est_visible: boolean;
+  date_fin?: string;
 };
 
-export type Annonce = {
-  id: number;
-  titre?: string;
-  type?: "offre" | "demande" | string;
-  ville?: string;
-  prix?: number | string;
-  est_approuvee?: boolean;
-  cree_le?: string;
+// --- 5. Billing (Abonnements) ---
+
+export type PaymentInfo = {
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  paid_at?: string;
 };
-
-
-// --- 5. User & Billing (Espace Pro) ---
 
 export type BillingMe = {
-  // Supporte les deux formats au cas où le serializer évolue
-  is_active?: boolean;
-  active?: boolean;
-
-  days_left?: number;
-  expires_at?: string | null; // ISO Date
-};
-
-// Type étendu pour le profil privé (ProMeSerializer)
-// Ce serializer renvoie des objets imbriqués complets pour l'édition
-export type ProPrivate = ProPublic & {
-  telephone_utilisateur?: string;
-  whatsapp_verifie?: boolean;
-  metier?: number; // ID pour l'édition
-  metier_details?: Job;
-  zone_geographique?: number; // ID pour l'édition
-  zone_details?: Location;
-  billing?: BillingMe;
+  status: string;
+  start_at: string | null;
+  end_at: string | null;
+  is_active: boolean;
+  days_left: number;
+  last_payment?: PaymentInfo | null;
 };

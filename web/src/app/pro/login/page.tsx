@@ -5,14 +5,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Loader2, Phone, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Phone, Lock, AlertCircle, LogIn } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuthStore } from "@/lib/auth.store";
+import { login } from "@/lib/auth.api"; // Importation de la fonction API
 
-
+// Schéma de validation
 const Schema = z.object({
-  phone: z.string().min(9, "Numéro trop court"),
-  password: z.string().min(4, "Mot de passe requis"),
+  phone: z.string().min(9, "Numéro de téléphone invalide"),
+  password: z.string().min(4, "Le mot de passe est requis"),
 });
 
 type FormValues = z.infer<typeof Schema>;
@@ -33,89 +35,113 @@ export default function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     setGlobalError(null);
     try {
-      // ✅ Appel via la fonction centralisée
+      // Appel API
       const data = await login({
         phone: values.phone,
         password: values.password
       });
 
-      if (!data.access) throw new Error("Aucun token reçu");
+      if (!data.access) throw new Error("Erreur protocole: Token manquant");
 
-      // Sauvegarde dans le store
+      // Sauvegarde des tokens
       setTokens(data.access, data.refresh);
 
-      router.push("/pro/dashboard");
+      toast.success("Connexion réussie !");
+      router.push("/dashboard"); // Redirection vers le tableau de bord
 
     } catch (error: any) {
       console.error("Erreur Login:", error);
-      if (error.response?.status === 401 || error.response?.status === 400) {
-        setGlobalError("Numéro ou mot de passe incorrect.");
+
+      // Gestion fine des erreurs
+      if (error.response?.status === 401) {
+        setGlobalError("Numéro de téléphone ou mot de passe incorrect.");
+      } else if (error.response?.status === 400) {
+        setGlobalError("Données invalides.");
       } else {
-        setGlobalError("Erreur de connexion.");
+        setGlobalError("Impossible de se connecter. Vérifiez votre réseau.");
       }
     }
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center p-6">
-      <main className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Connexion Pro</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Accédez à votre espace pour gérer vos annonces
+    <div className="flex min-h-[80vh] items-center justify-center p-4">
+      <main className="w-full max-w-md space-y-6">
+
+        {/* En-tête */}
+        <div className="text-center space-y-2">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-white mb-4">
+            <LogIn size={24} />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Espace Pro</h1>
+          <p className="text-sm text-zinc-400">
+            Connectez-vous pour gérer votre activité et vos annonces.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Formulaire Carte */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-5 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 md:p-8 backdrop-blur-sm shadow-xl"
+        >
           {globalError && (
-            <div className="flex items-center gap-2 rounded-lg bg-red-500/10 p-3 text-sm text-red-400 border border-red-500/20">
-              <AlertCircle size={16} />
-              {globalError}
+            <div className="flex items-start gap-3 rounded-xl bg-red-500/10 p-4 text-sm text-red-400 border border-red-500/20">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <p>{globalError}</p>
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-zinc-300">Téléphone</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider ml-1">Téléphone</label>
             <div className="relative">
-              <Phone className="absolute left-3 top-2.5 h-5 w-5 text-zinc-500" />
+              <Phone className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
               <input
                 type="tel"
-                className="w-full rounded-xl bg-white/5 border border-white/10 py-2 pl-10 pr-4 outline-none focus:border-white/30 transition-all"
+                placeholder="77 000 00 00"
+                className="w-full rounded-xl bg-black border border-white/10 pl-10 pr-4 py-3 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
                 {...register("phone")}
               />
             </div>
-            {errors.phone && <p className="text-xs text-red-400">{errors.phone.message}</p>}
+            {errors.phone && <p className="text-xs text-red-400 ml-1">{errors.phone.message}</p>}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-zinc-300">Mot de passe</label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between ml-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Mot de passe</label>
+                {/* Lien mot de passe oublié (optionnel pour l'instant) */}
+                <button type="button" className="text-xs text-indigo-400 hover:text-indigo-300">Oublié ?</button>
+            </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-5 w-5 text-zinc-500" />
+              <Lock className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
               <input
                 type="password"
-                className="w-full rounded-xl bg-white/5 border border-white/10 py-2 pl-10 pr-4 outline-none focus:border-white/30 transition-all"
+                placeholder="••••••"
+                className="w-full rounded-xl bg-black border border-white/10 pl-10 pr-4 py-3 text-white outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
                 {...register("password")}
               />
             </div>
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-red-400 ml-1">{errors.password.message}</p>}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full justify-center items-center gap-2 rounded-xl bg-white px-4 py-2.5 font-semibold text-black hover:bg-zinc-200 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+            className="flex w-full justify-center items-center gap-2 rounded-xl bg-white px-4 py-3.5 font-bold text-black hover:bg-zinc-200 disabled:opacity-70 disabled:cursor-not-allowed transition-colors shadow-lg shadow-white/5 mt-2"
           >
             {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isSubmitting ? "Connexion..." : "Se connecter"}
+            {isSubmitting ? "Connexion..." : "Accéder à mon compte"}
           </button>
-
-          <div className="text-center text-sm">
-            <span className="text-zinc-500">Pas encore de compte ? </span>
-            <button type="button" onClick={() => router.push("/pro/register")} className="text-white hover:underline font-medium">
-              Créer un compte
-            </button>
-          </div>
         </form>
+
+        <div className="text-center text-sm">
+          <span className="text-zinc-500">Pas encore partenaire ? </span>
+          <button
+            type="button"
+            onClick={() => router.push("/pro/register")}
+            className="text-white hover:text-indigo-400 font-semibold transition-colors"
+          >
+            Créer un compte Pro
+          </button>
+        </div>
       </main>
     </div>
   );

@@ -59,7 +59,6 @@ export async function rechercherPros(params: ProsSearchParams): Promise<Paginate
 }
 
 export async function getProPublicDetails(id: number): Promise<ProPublic> {
-  // Récupère le détail public (sans infos sensibles)
   const { data } = await api.get(`/api/pros/recherche/${id}/`);
   return data;
 }
@@ -86,16 +85,30 @@ export async function masquerMe(): Promise<ProPrivate> {
   return data;
 }
 
+/**
+ * ✅ CORRECTION
+ * Doit pointer vers /api/pros/me/media/ (correspond à path("me/media/", ...) dans urls.py)
+ */
 export async function uploadMeMedia(payload: { file: File; type_media: "PHOTO" | "VIDEO" | "CV" }) {
   const fd = new FormData();
   fd.append("fichier", payload.file);
   fd.append("type_media", payload.type_media);
 
-  // Endpoint dédié aux médias du pro connecté
-  const { data } = await api.post("/api/pros/media/", fd, {
+  const { data } = await api.post("/api/pros/me/media/", fd, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
   return data;
+}
+
+/**
+ * ✅ AJOUT
+ * Suppression d’un média du pro connecté.
+ * Si ton backend expose bien la suppression sur /api/pros/me/media/<int:pk>/,
+ * alors l’URL doit être celle-ci (cohérente avec "me/media/").
+ */
+export async function deleteMeMedia(mediaId: number) {
+  await api.delete(`/api/pros/me/media/${mediaId}/`);
 }
 
 // --- FAVORIS ---
@@ -114,6 +127,12 @@ export async function addFavori(proId: number) {
 }
 
 export async function removeFavori(proId: number) {
-  // L'URL attend l'ID du PROFESSIONNEL, pas l'ID de l'objet favori (selon votre backend)
   await api.delete(`/api/pros/favoris/${proId}/`);
+}
+
+// --- SIGNALEMENTS ---
+
+export async function signalerPro(payload: { professionnel: number; motif: string; description?: string }) {
+  const { data } = await api.post("/api/reports/", payload);
+  return data;
 }

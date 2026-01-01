@@ -7,6 +7,7 @@ from .views import (
     AdminPublicationProView,
     AdminRetraitPublicationProView,
     MediaProCreateView,
+    MediaProDeleteView,
     ContactFavoriView,
     ContactFavoriDestroyView,
     ProPublicDetailView
@@ -29,6 +30,7 @@ urlpatterns = [
     # --- Espace Client (Mes Contacts / Favoris) ---
     # GET pour lister, POST pour ajouter
     path("favoris/", ContactFavoriView.as_view(), name="pro_favoris_list_add"),
+    path("media/<int:pk>/", MediaProDeleteView.as_view(), name="pro_media_delete"),
     # DELETE pour supprimer un favori spécifique
     path("favoris/<int:professionnel_id>/", ContactFavoriDestroyView.as_view(), name="pro_favoris_delete"),
 

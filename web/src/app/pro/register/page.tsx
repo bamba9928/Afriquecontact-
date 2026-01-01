@@ -30,7 +30,6 @@ import {
 } from "@/lib/catalog.api";
 import { registerPro, type RegisterPayload } from "@/lib/auth.api";
 
-// --- COMPOSANT SEARCHABLE SELECT (Amélioré) ---
 interface Option {
   id: number | string;
   label: string;

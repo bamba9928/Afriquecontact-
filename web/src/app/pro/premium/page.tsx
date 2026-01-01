@@ -24,7 +24,6 @@ const formatDate = (dateString?: string) => {
 export default function PremiumPage() {
   const router = useRouter();
   const token = useAuthStore((s) => s.accessToken);
-  const user = useAuthStore((s) => s.user);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Redirection si non connecté
@@ -75,7 +74,8 @@ export default function PremiumPage() {
   const isActive = !!sub?.is_active;
   const daysLeft = sub?.days_left ?? 0;
   const endDate = sub?.end_at;
-  const lastPaymentDate = sub?.last_payment ? sub.last_payment.paid_at || sub.last_payment.created_at : null;
+  // Gestion robuste de last_payment qui peut être null
+  const lastPaymentDate = sub?.last_payment ? (sub.last_payment.paid_at || sub.last_payment.created_at) : null;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 space-y-10">
@@ -120,7 +120,7 @@ export default function PremiumPage() {
               <div className="mt-1 text-sm text-zinc-400">
                 {isActive ? (
                    <span className="flex items-center gap-2">
-                      <Calendar size={14}/> Expire le <span className="text-white font-medium">{formatDate(endDate)}</span> (Reste {daysLeft}j)
+                      <Calendar size={14}/> Expire le <span className="text-white font-medium">{formatDate(endDate || undefined)}</span> (Reste {daysLeft}j)
                    </span>
                 ) : (
                    <span>Vos coordonnées (Téléphone, WhatsApp) sont masquées aux visiteurs.</span>

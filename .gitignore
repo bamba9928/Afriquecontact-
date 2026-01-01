@@ -1,7 +1,3 @@
-echo .env>> .gitignore
-echo .venv>> .gitignore
-echo __pycache__/>> .gitignore
-echo *.sqlite3>> .gitignore
 # Python / Django
 __pycache__/
 *.py[cod]

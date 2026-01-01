@@ -8,43 +8,48 @@ import {
   addFavori,
   removeFavori
 } from "@/lib/pros.api";
+import { getAds, trackAdClick } from "@/lib/ads.api";
 import { useAuthStore } from "@/lib/auth.store";
-import ProCard from "@/components/ProCard";
 import Link from "next/link";
-import { Search, Sparkles, ArrowRight, Briefcase } from "lucide-react";
+import ProCard from "@/components/ProCard";
+import {
+  Search, MapPin, Phone, Star, ShieldCheck,
+  ArrowRight, Briefcase
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { mediaUrl } from "@/lib/media-url";
 
 export default function HomePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
 
-  // 1. Récupérer les Jobs Featured
-  const {
-    data: jobs = [],
-    isLoading: jobsLoading,
-    isError: jobsError,
-  } = useQuery({
+  // --- DATA FETCHING ---
+
+  // 1. Jobs (Catégories)
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ["jobs-featured"],
     queryFn: getFeaturedJobs,
-    staleTime: 1000 * 60 * 30, // 30 min
+    staleTime: 1000 * 60 * 30,
   });
 
-  // 2. Récupérer les Pros Recommandés
-  const {
-    data: prosData,
-    isLoading: prosLoading,
-    isError: prosError,
-  } = useQuery({
+  // 2. Pros (Cartes)
+  const { data: prosData, isLoading: prosLoading } = useQuery({
     queryKey: ["home-pros"],
-    queryFn: () => rechercherPros({ page: 1, page_size: 10 }),
-    staleTime: 1000 * 60 * 5, // 5 min
+    queryFn: () => rechercherPros({ page: 1, page_size: 8 }),
+    staleTime: 1000 * 60 * 5,
   });
-
   const pros = prosData?.results ?? [];
 
-  // 3. Récupérer les IDs des favoris (pour afficher les coeurs pleins)
+  // 3. Pubs
+  const { data: ads } = useQuery({
+    queryKey: ["ads-home"],
+    queryFn: getAds,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // 4. Favoris
   const { data: favIds } = useQuery({
     queryKey: ["favoris-ids"],
     queryFn: async () => {
@@ -55,7 +60,8 @@ export default function HomePage() {
     enabled: !!token,
   });
 
-  // 4. Mutation Toggle Favori
+  // --- MUTATIONS ---
+
   const toggleFavoriMutation = useMutation({
     mutationFn: async (proId: number) => {
       if (!token) {
@@ -67,147 +73,496 @@ export default function HomePage() {
       return addFavori(proId);
     },
     onSuccess: () => {
-      // On invalide pour rafraîchir les coeurs partout
       queryClient.invalidateQueries({ queryKey: ["favoris-ids"] });
       queryClient.invalidateQueries({ queryKey: ["favoris"] });
       toast.success("Favoris mis à jour");
     },
     onError: (err: any) => {
-      if (err?.message !== "Login required") toast.error("Erreur lors de la mise à jour");
+      if (err?.message !== "Login required") toast.error("Erreur action favori");
     },
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 space-y-10">
+    <main className="min-h-screen bg-zinc-950 pb-20">
 
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-black p-8 text-center md:text-left shadow-2xl shadow-indigo-900/20 border border-white/10">
-        {/* Effets de fond */}
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl"></div>
+      {/* 1. HÉROS PREMIUM & RECHERCHE CENTRALE */}
+      <section
+        className="relative overflow-hidden px-4 pt-20 pb-16 md:pt-32 md:pb-24 text-center"
+        aria-labelledby="hero-title"
+      >
+        {/* Background premium */}
+        <div className="absolute inset-0 -z-10" aria-hidden="true">
+          {/* Radial glows */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,255,0,0.18),transparent_55%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_55%)]" />
+          {/* Subtle grid */}
+          <div className="absolute inset-0 opacity-[0.10] [background-image:linear-gradient(to_right,rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.10)_1px,transparent_1px)] [background-size:64px_64px]" />
+          {/* Orbs */}
+          <div className="absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#00FF00]/20 blur-3xl animate-pulse" />
+          <div className="absolute -bottom-28 right-10 h-96 w-96 rounded-full bg-amber-500/20 blur-3xl animate-pulse [animation-delay:450ms]" />
+          {/* Vignette */}
+          <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.85)]" />
+        </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-          <div className="space-y-4 max-w-xl">
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl leading-tight">
-              Trouvez le bon pro <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                partout au Sénégal.
-              </span>
-            </h1>
-            <p className="text-indigo-200/80 text-lg">
-              Plombiers, Mécaniciens, Couturiers... Accédez aux meilleurs contacts recommandés et vérifiés autour de vous.
-            </p>
+        <div className="relative mx-auto max-w-6xl">
+          <div className="mx-auto max-w-4xl space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-zinc-200 backdrop-blur">
+              <span
+                className="h-2 w-2 rounded-full bg-[#00FF00] shadow-[0_0_18px_rgba(0,255,0,0.75)]"
+                aria-label="Statut actif"
+              />
+              Pros vérifiés • Contact direct • Sans intermédiaire
+            </div>
 
-            {/* Barre de recherche factice (Bouton) */}
-            <button
-              onClick={() => router.push("/recherche")}
-              className="mt-6 flex w-full max-w-md items-center gap-3 rounded-2xl bg-white/10 px-5 py-4 text-indigo-100 backdrop-blur-md transition-all hover:bg-white/20 hover:scale-[1.02] border border-white/10 shadow-lg group"
-            >
-              <Search className="h-5 w-5 text-indigo-300 group-hover:text-white transition-colors" />
-              <span className="text-sm font-medium opacity-90">Rechercher un métier, une zone...</span>
-            </button>
-          </div>
+            {/* Title + subtitle */}
+            <div className="space-y-4">
+              <h1
+                id="hero-title"
+                className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.05]"
+              >
+                Trouvez un{" "}
+                <span className="relative inline-block">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FF00] via-emerald-300 to-amber-200">
+                    professionnel
+                  </span>
+                  <span className="absolute -bottom-1 left-0 right-0 h-[6px] rounded-full bg-[#00FF00]/20 blur-sm" aria-hidden="true" />
+                </span>
+                <br className="hidden md:block" />
+                en quelques secondes
+              </h1>
 
-          {/* CTA "Devenir Pro" */}
-          <div className="hidden md:block shrink-0">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md hover:bg-white/10 transition-colors max-w-xs">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
-                  <Briefcase size={24} />
-                </div>
-                <div>
-                  <div className="font-bold text-white text-lg">Vous êtes un pro ?</div>
-                  <div className="text-xs text-zinc-400">Boostez votre visibilité dès aujourd'hui</div>
+              <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto">
+                Vérifiés, notés et disponibles près de chez vous. La référence pour vos
+                travaux et services au Sénégal.
+              </p>
+            </div>
+
+            {/* BARRE DE RECHERCHE PREMIUM */}
+            <div className="mx-auto max-w-2xl">
+              <div className="group relative">
+                {/* Outer glow / gradient ring */}
+                <div
+                  className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-[#00FF00]/70 via-emerald-400/40 to-amber-400/50 blur-lg opacity-35 transition-opacity duration-300 group-hover:opacity-60 group-focus-within:opacity-80"
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-[#00FF00]/60 via-emerald-300/30 to-amber-300/40 opacity-40 transition-opacity duration-300 group-hover:opacity-60 group-focus-within:opacity-90"
+                  aria-hidden="true"
+                />
+
+                {/* Card */}
+                <button
+                  type="button"
+                  onClick={() => router.push("/recherche")}
+                  className="
+                    relative w-full overflow-hidden rounded-3xl border border-white/10
+                    bg-zinc-900/70 backdrop-blur-xl
+                    px-6 py-5 text-left
+                    shadow-2xl shadow-black/50
+                    transition-all duration-300
+                    hover:border-white/20 hover:bg-zinc-900/80
+                    active:scale-[0.99]
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950
+                  "
+                  aria-label="Rechercher un professionnel par métier et localisation"
+                >
+                  {/* Shimmer */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    aria-hidden="true"
+                  >
+                    <div className="absolute -left-1/2 top-0 h-full w-[200%] bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.06),transparent)] translate-x-[-30%] group-hover:translate-x-[30%] transition-transform duration-700" />
+                  </div>
+
+                  <div className="relative flex items-center gap-4">
+                    {/* Icon bubble */}
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-[#00FF00] shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+                      aria-hidden="true"
+                    >
+                      <Search className="h-5 w-5" />
+                    </div>
+
+                    <div className="flex-1">
+                      <span className="block text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                        Que recherchez-vous ?
+                      </span>
+                      <span className="mt-1 block text-white font-semibold text-base md:text-lg">
+                        Plombier, Nounou, Mécanicien...
+                      </span>
+                      <span className="mt-1 block text-xs text-zinc-400">
+                        Appuyez pour lancer la recherche
+                      </span>
+                    </div>
+
+                    {/* CTA bubble */}
+                    <div className="hidden md:flex items-center gap-2" aria-hidden="true">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#00FF00] text-black shadow-lg shadow-[#00FF00]/20 transition-transform duration-300 group-hover:translate-x-0.5">
+                        <ArrowRight size={18} />
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Helper chips */}
+                <div
+                  className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs"
+                  role="list"
+                  aria-label="Catégories populaires"
+                >
+                  <span
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-zinc-300 backdrop-blur"
+                    role="listitem"
+                  >
+                    Plomberie
+                  </span>
+                  <span
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-zinc-300 backdrop-blur"
+                    role="listitem"
+                  >
+                    Mécanique
+                  </span>
+                  <span
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-zinc-300 backdrop-blur"
+                    role="listitem"
+                  >
+                    Couture
+                  </span>
+                  <span
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-zinc-300 backdrop-blur"
+                    role="listitem"
+                  >
+                    Électricité
+                  </span>
                 </div>
               </div>
+            </div>
 
+            {/* BOUTONS D'ACTION (Desktop) */}
+            <div className="hidden md:flex items-center justify-center gap-4 pt-4">
+              <Link
+                href="/annonces"
+                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-lg shadow-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+              >
+                Publier une demande
+              </Link>
               <Link
                 href="/pro/register"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black hover:bg-indigo-50 transition-all shadow-lg hover:shadow-xl"
+                className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition-colors shadow-lg shadow-amber-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               >
-                Créer ma fiche gratuite
-                <ArrowRight size={16} />
+                Inscrire mon activité
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* JOBS FEATURED */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Sparkles className="text-amber-400 fill-amber-400/20" size={20} />
-            Les professions populaires
-          </h2>
-          <Link href="/recherche" className="text-sm font-medium text-indigo-400 hover:text-indigo-300 hover:underline">
-            Voir tout
-          </Link>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5">
-          {jobsLoading ? (
-            [1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-9 w-28 rounded-full bg-white/5 animate-pulse" />)
-          ) : jobsError ? (
-            <div className="text-sm text-zinc-500">Impossible de charger les métiers.</div>
-          ) : (
-            jobs.slice(0, 14).map((j) => (
-              <Link
-                key={j.id}
-                href={`/recherche?metier=${j.id}`}
-                className="rounded-full border border-white/10 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 hover:border-indigo-500/50 hover:bg-indigo-500/20 hover:text-white transition-all shadow-sm"
-              >
-                {j.name}
-              </Link>
-            ))
-          )}
+      {/* 2. PREUVES DE CONFIANCE (Compteurs) */}
+      <section
+        className="border-y border-white/5 bg-black/20 backdrop-blur-sm"
+        aria-labelledby="stats-title"
+      >
+        <h2 id="stats-title" className="sr-only">Statistiques de la plateforme</h2>
+        <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="space-y-1">
+            <div className="text-3xl font-bold text-white" aria-label="1200 professionnels vérifiés">1,200+</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Pros Vérifiés</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-3xl font-bold text-emerald-400" aria-label="450 demandes ce mois">450</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Demandes ce mois</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-3xl font-bold text-amber-400" aria-label="Note moyenne 4.8 sur 5">4.8/5</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Note Moyenne</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-3xl font-bold text-white" aria-label="Disponibilité 24 heures sur 24, 7 jours sur 7">24/7</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Disponibilité</div>
+          </div>
         </div>
       </section>
 
-      {/* PROS RECOMMANDÉS */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Recommandés pour vous</h2>
-        </div>
+      {/* 3. CATÉGORIES (Métiers) */}
+      <section
+        className="max-w-7xl mx-auto px-4 py-16 space-y-10"
+        aria-labelledby="categories-title"
+      >
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-2">
+            <h2
+              id="categories-title"
+              className="text-2xl md:text-3xl font-extrabold tracking-tight text-white"
+            >
+              Explorer par{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FF00] via-emerald-300 to-amber-200">
+                métier
+              </span>
+            </h2>
+            <p className="text-sm md:text-base text-zinc-400">
+              Choisissez une catégorie et trouvez des professionnels disponibles près de chez vous.
+            </p>
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-          {prosLoading ? (
-            [1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-40 rounded-2xl bg-white/5 border border-white/5 animate-pulse" />
-            ))
-          ) : prosError ? (
-            <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-2xl">
-                <p className="text-zinc-500">Impossible de charger les recommandations.</p>
-                <button onClick={() => window.location.reload()} className="text-indigo-400 text-sm mt-2 hover:underline">Réessayer</button>
-            </div>
-          ) : (
-            pros.slice(0, 6).map((p) => {
-              const isFav = favIds?.has(p.id) ?? false;
-
-              return (
-                // Lien vers le détail
-                <Link key={p.id} href={`/pros/${p.id}`} className="block h-full transition-transform hover:scale-[1.01]">
-                  <ProCard
-                    pro={p}
-                    isFavorite={isFav}
-                    onToggleFavori={(id) => toggleFavoriMutation.mutate(id)}
-                  />
-                </Link>
-              );
-            })
-          )}
-        </div>
-
-        <div className="flex justify-center pt-4">
           <Link
             href="/recherche"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white hover:bg-white/10 transition-colors"
+            className="text-sm font-semibold tracking-wide text-emerald-300 hover:text-emerald-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded px-2 py-1"
+            aria-label="Voir toutes les catégories"
           >
-            Explorer tous les professionnels
-            <ArrowRight size={16} />
+            Tout voir <span className="opacity-70" aria-hidden="true">→</span>
+          </Link>
+        </div>
+
+        <nav aria-label="Catégories de métiers">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {jobsLoading ? (
+              [1, 2, 3, 4, 5, 6].map((i) => (
+                <li key={i}>
+                  <div className="h-24 rounded-2xl bg-white/5 animate-pulse" aria-label="Chargement..." />
+                </li>
+              ))
+            ) : (
+              jobs.slice(0, 12).map((j) => (
+                <li key={j.id}>
+                  <Link
+                    href={`/recherche?metier=${j.id}`}
+                    className="
+                      group relative overflow-hidden rounded-2xl border border-white/10
+                      bg-zinc-900/50 p-4 text-center
+                      transition-all duration-300
+                      hover:-translate-y-0.5 hover:border-[#00FF00]/30 hover:bg-zinc-900/70
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00]
+                      focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950
+                      block
+                    "
+                    aria-label={`Rechercher des professionnels en ${j.name}`}
+                  >
+                    {/* Glow au hover */}
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      aria-hidden="true"
+                    >
+                      <div className="absolute -top-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-[#00FF00]/12 blur-2xl" />
+                      <div className="absolute -bottom-10 right-0 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
+                    </div>
+
+                    <div className="relative flex flex-col items-center justify-center gap-3">
+                      {/* Icon capsule */}
+                      <div
+                        className="
+                          flex h-11 w-11 items-center justify-center rounded-2xl
+                          border border-white/10 bg-black/30 text-zinc-300
+                          transition-all duration-300
+                          group-hover:border-[#00FF00]/30 group-hover:text-[#00FF00]
+                          group-hover:shadow-[0_0_0_1px_rgba(0,255,0,0.15)]
+                        "
+                        aria-hidden="true"
+                      >
+                        <Briefcase size={18} />
+                      </div>
+
+                      {/* Libellé */}
+                      <span
+                        className="
+                          text-[13px] font-semibold tracking-wide
+                          text-zinc-200 transition-colors duration-300
+                          group-hover:text-white
+                        "
+                      >
+                        {j.name}
+                      </span>
+
+                      {/* Mini underline premium */}
+                      <span
+                        className="h-[2px] w-10 rounded-full bg-white/10 transition-all duration-300 group-hover:w-14 group-hover:bg-[#00FF00]/40"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </nav>
+      </section>
+
+      {/* 4. COMMENT ÇA MARCHE */}
+      <section
+        className="bg-zinc-900 py-16 border-y border-white/5"
+        aria-labelledby="how-it-works-title"
+      >
+        <div className="max-w-6xl mx-auto px-4 text-center space-y-12">
+          <h2
+            id="how-it-works-title"
+            className="text-2xl font-bold text-white"
+          >
+            Comment ça marche ?
+          </h2>
+
+          <ol className="grid md:grid-cols-3 gap-8 relative list-none">
+            {/* Ligne connectrice (Desktop uniquement) */}
+            <div
+              className="hidden md:block absolute top-12 left-20 right-20 h-0.5 bg-gradient-to-r from-emerald-900 via-zinc-700 to-emerald-900 -z-0"
+              aria-hidden="true"
+            />
+
+            <li className="relative z-10 flex flex-col items-center gap-4">
+              <div
+                className="flex h-24 w-24 items-center justify-center rounded-3xl bg-zinc-950 border border-emerald-500/30 text-emerald-400 shadow-xl"
+                aria-hidden="true"
+              >
+                <Search size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-white">1. Je cherche un professionnel</h3>
+              <p className="text-sm text-zinc-400 max-w-xs">
+                Sélectionnez le métier et votre quartier pour voir les profils disponibles.
+              </p>
+            </li>
+
+            <li className="relative z-10 flex flex-col items-center gap-4">
+              <div
+                className="flex h-24 w-24 items-center justify-center rounded-3xl bg-zinc-950 border border-amber-500/30 text-amber-400 shadow-xl"
+                aria-hidden="true"
+              >
+                <ShieldCheck size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-white">2. Je compare les avis</h3>
+              <p className="text-sm text-zinc-400 max-w-xs">
+                Consultez les photos de réalisations, les prix et les notes des autres clients.
+              </p>
+            </li>
+
+            <li className="relative z-10 flex flex-col items-center gap-4">
+              <div
+                className="flex h-24 w-24 items-center justify-center rounded-3xl bg-zinc-950 border border-white/10 text-white shadow-xl"
+                aria-hidden="true"
+              >
+                <Phone size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-white">3. Je contacte direct</h3>
+              <p className="text-sm text-zinc-400 max-w-xs">
+                Appel ou WhatsApp direct. Pas d'intermédiaire, pas de frais cachés.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      {/* 5. ESPACE PUB (Bannières) */}
+      {ads && ads.length > 0 && (
+        <section
+          className="max-w-7xl mx-auto px-4 py-12"
+          aria-labelledby="ads-title"
+        >
+          <h2
+            id="ads-title"
+            className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-6"
+          >
+            Offres Partenaires
+          </h2>
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+            {ads.slice(0, 3).map((ad) => (
+              <a
+                key={ad.id}
+                href={ad.lien || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-2xl overflow-hidden border border-white/10 hover:border-emerald-500/50 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                onClick={() => trackAdClick(ad.id)}
+                aria-label={`Voir l'offre partenaire${ad.titre ? `: ${ad.titre}` : ''}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mediaUrl(ad.image ?? ad.fichier)}
+                  alt={ad.titre || "Publicité partenaire"}
+                  loading="lazy"
+                  className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 6. LISTE PROS (Design Cartes) */}
+      <section
+        className="max-w-7xl mx-auto px-4 py-8 space-y-8"
+        aria-labelledby="featured-pros-title"
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2
+            id="featured-pros-title"
+            className="text-2xl font-bold text-white"
+          >
+            Les mieux notés près de chez vous
+          </h2>
+        </div>
+
+        {prosLoading ? (
+          <div
+            className="grid gap-6 md:grid-cols-2 xl:grid-cols-4"
+            role="status"
+            aria-label="Chargement des professionnels"
+          >
+            {[1, 2, 3, 4].map(i => (
+              <div
+                key={i}
+                className="h-80 rounded-2xl bg-white/5 animate-pulse"
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {pros.map((p) => {
+              const isFav = favIds?.has(p.id) ?? false;
+              return (
+                <article key={p.id}>
+                  <Link
+                    href={`/pros/${p.id}`}
+                    className="block h-full transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-2xl"
+                    aria-label={`Voir le profil de ${p.nom || 'ce professionnel'}`}
+                  >
+                    <ProCard
+                      pro={p}
+                      isFavorite={isFav}
+                      onToggleFavori={(id) => toggleFavoriMutation.mutate(id)}
+                    />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-center pt-8">
+          <Link
+            href="/recherche"
+            className="px-8 py-3 rounded-full border border-white/10 text-white hover:bg-white/5 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+          >
+            Voir plus de professionnels
           </Link>
         </div>
       </section>
+
+      {/* 7. NUMÉRO COMMERCIAL FLOTTANT */}
+      <a
+        href="tel:780103636"
+        className="fixed bottom-20 right-4 z-40 flex items-center gap-3 pl-4 pr-2 py-2 rounded-full bg-emerald-600 text-white shadow-2xl shadow-emerald-900/40 hover:scale-105 transition-transform border border-emerald-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+        aria-label="Appeler le support au 78 010 36 36"
+      >
+        <div className="text-xs font-bold text-right hidden sm:block">
+          <div>Besoin d'aide ?</div>
+          <div className="text-emerald-100">78 010 36 36</div>
+        </div>
+        <div
+          className="h-10 w-10 bg-white text-emerald-600 rounded-full flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <Phone size={20} fill="currentColor" />
+        </div>
+      </a>
+
     </main>
   );
 }

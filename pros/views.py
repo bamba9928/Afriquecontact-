@@ -295,8 +295,16 @@ class MediaProCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(professionnel=self.request.user.pro_profile)
+class MediaProDeleteView(generics.DestroyAPIView):
+    """
+    Permet à un professionnel de supprimer un de ses propres médias.
+    """
+    permission_classes = [permissions.IsAuthenticated, EstProfessionnel]
+    serializer_class = MediaProSerializer
 
-
+    def get_queryset(self):
+        # On ne peut supprimer que les médias qui appartiennent à l'utilisateur connecté
+        return MediaPro.objects.filter(professionnel__utilisateur=self.request.user)
 # ============================================================================
 # VUES FAVORIS
 # ============================================================================

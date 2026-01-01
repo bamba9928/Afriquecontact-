@@ -123,7 +123,8 @@ export default function ProProfilPage() {
   // 8) Delete Media
   const deleteMediaMutation = useMutation({
     mutationFn: async (mediaId: number) => {
-        await api.delete(`/api/pro/media/${mediaId}/`);
+        // CORRECTION : utilisation de /api/pros/ (pluriel) pour correspondre à la convention
+        await api.delete(`/api/pros/media/${mediaId}/`);
     },
     onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["pro-me"] });
@@ -138,7 +139,8 @@ export default function ProProfilPage() {
     try {
       const fd = new FormData();
       fd.append("avatar", file);
-      const { data } = await api.patch("/api/pro/me/", fd, {
+      // CORRECTION : utilisation de /api/pros/me/ (pluriel)
+      const { data } = await api.patch("/api/pros/me/", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       qc.setQueryData(["pro-me"], data);
@@ -152,17 +154,29 @@ export default function ProProfilPage() {
 
   // 10) Partage
   const handleShare = () => {
-      if (navigator.share && pro) {
-          navigator.share({
-              title: pro.nom_entreprise,
-              text: `Retrouvez ${pro.nom_entreprise} sur Senegal Contact !`,
-              url: `${window.location.origin}/pros/${pro.slug}`
-          }).catch(console.error);
-      } else {
-          toast.info("Lien copié dans le presse-papier !");
-          if(pro?.slug) navigator.clipboard.writeText(`${window.location.origin}/pros/${pro.slug}`);
-      }
+    if (!pro) return;
+
+    // Texte conforme au CdC
+    const shareText = `Vous êtes à la recherche d’un ${
+      pro.metier_name || "professionnel"
+    } ? Contactez ${pro.nom_entreprise} vite sur Senegal Contact !`;
+    const shareUrl = `${window.location.origin}/pros/${pro.slug}`;
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: pro.nom_entreprise,
+          text: shareText,
+          url: shareUrl,
+        })
+        .catch(console.error);
+    } else {
+      // Fallback copier-coller
+      navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      toast.success("Lien et texte copiés !");
+    }
   };
+
 
   const onSubmit = (values: ProForm) => {
     updateMutation.mutate({
@@ -268,7 +282,7 @@ export default function ProProfilPage() {
                 >
                 <option value="">Sélectionner...</option>
                 {jobsQ.data?.map((j) => (
-                    <option key={j.id} value={j.id}>{j.nom ?? j.name}</option>
+                    <option key={j.id} value={j.id}>{j.name}</option> // Correction: j.name (Catalog API)
                 ))}
                 </select>
             </div>
@@ -304,7 +318,7 @@ export default function ProProfilPage() {
                 >
                 <option value="">Sélectionner...</option>
                 {locsQ.data?.map((l) => (
-                    <option key={l.id} value={l.id}>{l.nom ?? l.name}</option>
+                    <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
                 </select>
             </div>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAnnonces } from "@/lib/annonces.api";
 import Link from "next/link";
 import { Plus, Tag, MapPin, Clock, ShoppingBag, Search } from "lucide-react";
+// Importez vos types si disponibles, sinon on utilise 'any' pour l'exemple
+// import type { Annonce, Paginated } from "@/lib/types";
 
 // --- Utilitaires de formatage ---
 
@@ -28,19 +30,15 @@ export default function AnnoncesPage() {
   // Onglets: OFFRE / DEMANDE
   const [activeTab, setActiveTab] = useState<"OFFRE" | "DEMANDE">("OFFRE");
 
-  const { data: annonces, isLoading } = useQuery({
-    queryKey: ["annonces", "type_annonce", activeTab],
-    // Si l'API supporte: filtrage serveur par type_annonce
-    // Ajuste la clé/valeur si ton backend attend un autre nom (ex: type="offre"/"demande")
-    queryFn: () => listAnnonces({ type_annonce: activeTab }),
+  const { data: annonces = [], isLoading } = useQuery({
+    queryKey: ["annonces", activeTab], // Clé dépend du tab pour re-fetch au changement
+    queryFn: () => listAnnonces({ type: activeTab }), // ✅ Correction: param 'type'
+    select: (data: any) => data.results ?? [], // ✅ Correction: Extraction du tableau depuis la pagination
   });
 
-  // Fallback si l'API ignore le paramètre: filtrage côté client
-  const annoncesFiltrees = useMemo(() => {
-    const list = annonces ?? [];
-    // Si ton objet "a" expose déjà type_annonce => utilise ça, sinon adapte (ex: a.type)
-    return list.filter((a: any) => (a.type_annonce ?? a.type) === activeTab);
-  }, [annonces, activeTab]);
+  // Sécurité client : on s'assure que tout correspond à l'onglet actif
+  // (Utile si le cache est stale ou si le backend est permissif)
+  const annoncesFiltrees = annonces.filter((a: any) => a.type === activeTab);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
@@ -93,8 +91,8 @@ export default function AnnoncesPage() {
           ))
         ) : (
           annoncesFiltrees.map((a: any) => {
-            const type = a.type_annonce ?? a.type; // adapte si besoin
-            const isOffre = type === "OFFRE" || type === "offre";
+            // Correction : Utilisation du champ 'type' direct
+            const isOffre = a.type === "OFFRE";
 
             return (
               <article
@@ -112,7 +110,7 @@ export default function AnnoncesPage() {
                       }`}
                     >
                       {isOffre ? <Tag size={10} /> : <Search size={10} />}
-                      {String(type ?? "").toLowerCase()}
+                      {a.type}
                     </span>
 
                     {a.cree_le && (
@@ -152,7 +150,7 @@ export default function AnnoncesPage() {
           <ShoppingBag className="h-12 w-12 text-zinc-600 mb-4" />
           <h3 className="text-lg font-medium text-white">Aucune annonce trouvée</h3>
           <p className="text-sm text-zinc-500 max-w-sm mt-2 mb-6">
-            Il n&apos;y a pas encore d&apos;annonces dans cette catégorie. Soyez le premier à en publier une !
+            Il n&apos;y a pas encore d&apos;annonces dans la catégorie {activeTab.toLowerCase()}.
           </p>
           <Link href="/pro/annonces" className="text-indigo-400 hover:text-indigo-300 font-medium">
             Publier maintenant &rarr;

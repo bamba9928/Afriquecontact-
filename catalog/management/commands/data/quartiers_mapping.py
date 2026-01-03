@@ -1,276 +1,368 @@
-"""
-Mapping exhaustif des quartiers par ville (département).
-Chaque clé = nom du département, valeur = liste des quartiers réels.
-"""
-
-"""
-À placer dans: catalog/management/commands/data/quartiers_mapping.py
-"""
-
 QUARTIERS_PAR_VILLE = {
-    # RÉGION DE DAKAR
+    # ---------------------------------------------------------
+    # 1. RÉGION DE DAKAR
+    # ---------------------------------------------------------
     "Dakar": [
-        "Plateau", "Point E", "Mermoz", "Sacré-Cœur", "Almadies", "Fann Résidence",
-        "Ngor", "Yoff", "Amitié", "Liberté 6", "Grand Yoff", "Parcelles Assainies",
-        "HLM", "Colobane", "Médina", "Gueule Tapée", "Fass", "Dieuppeul-Derklé",
-        "Sicap Baobab", "Zone B", "Hann Maristes", "Ouakam", "Cité Keur Gorgui",
-        "Cambérène", "Bel-Air", "Hann", "Grand Dakar", "Sicap Liberté", "Fann-Point E",
+        "Almadies", "Amitié", "Amitié 1", "Amitié 2", "Amitié 3",
+        "Baobabs", "Bel-Air", "Biscuiterie", "Bopp",
+        "Cambérène", "Cambérène Centre", "Cambérène Nord", "Camp Pénal", "Castors",
+        "Cité Air Afrique", "Cité Asecna", "Cité Assemblée", "Cité BCEAO",
+        "Cité Comico", "Cité Djily Mbaye", "Cité Keur Gorgui", "Cité Lobatt Fall",
+        "Cité Millionnaire", "Cité Police", "Cité Senelec", "Cité Sonatel",
+        "Cité Universitaire", "Cité des Eaux", "Cité des Magistrats",
+        "Colobane", "Colobane Rail",
+        "Derklé", "Dieuppeul", "Dieuppeul Derklé 1", "Dieuppeul Derklé 2", "Dieuppeul-Derklé",
+        "Fann", "Fann Hock", "Fann Point E", "Fann Résidence",
+        "Fass", "Fass Colobane", "Fass Delorme", "Fass Gueule Tapée", "Fass Paillote",
+        "Fith Mith", "Gibraltar",
+        "Grand Dakar", "Grand Dakar Cices",
+        "Grand Yoff", "Grand Yoff Arafat", "Grand Yoff Tally Boubess",
+        "Gueule Tapée",
+        "HLM 1", "HLM 2", "HLM 3", "HLM 4", "HLM 5", "HLM 6",
+        "HLM Fass", "HLM Grand Médine", "HLM Grand Yoff", "HLM Patte d'Oie",
+        "Hann", "Hann Bel-Air", "Hann Maristes", "Hann Montagne", "Hann Pêcheurs",
+        "Keur Gorgui",
+        "Liberté 1", "Liberté 2", "Liberté 3", "Liberté 4", "Liberté 5", "Liberté 6",
+        "Mermoz", "Mermoz Bopp", "Mermoz Front de Terre", "Mermoz Pyrotechnie",
+        "Médina",
+        "Ngor", "Nord Foire", "Ouakam", "Ouakam Cité Avion", "Ouest Foire",
+        "Parcelles Assainies", "Parcelles Assainies Unité 1", "Parcelles Assainies Unité 10",
+        "Parcelles Assainies Unité 11", "Parcelles Assainies Unité 12", "Parcelles Assainies Unité 13",
+        "Parcelles Assainies Unité 14", "Parcelles Assainies Unité 15", "Parcelles Assainies Unité 16",
+        "Parcelles Assainies Unité 17", "Parcelles Assainies Unité 18", "Parcelles Assainies Unité 19",
+        "Parcelles Assainies Unité 2", "Parcelles Assainies Unité 20", "Parcelles Assainies Unité 21",
+        "Parcelles Assainies Unité 22", "Parcelles Assainies Unité 23", "Parcelles Assainies Unité 24",
+        "Parcelles Assainies Unité 25", "Parcelles Assainies Unité 26", "Parcelles Assainies Unité 27",
+        "Parcelles Assainies Unité 28", "Parcelles Assainies Unité 29", "Parcelles Assainies Unité 3",
+        "Parcelles Assainies Unité 30", "Parcelles Assainies Unité 4", "Parcelles Assainies Unité 5",
+        "Parcelles Assainies Unité 6", "Parcelles Assainies Unité 7", "Parcelles Assainies Unité 8",
+        "Parcelles Assainies Unité 9",
+        "Patte d'Oie", "Patte d'Oie Builders",
+        "Plateau", "Plateau Nord", "Plateau Sud",
+        "Point E", "Point E Extension", "Point de Presse",
+        "Rebeuss",
+        "Sacré-Cœur 1", "Sacré-Cœur 2", "Sacré-Cœur 3",
+        "Sicap Baobab", "Sicap Dieuppeul", "Sicap Foire", "Sicap Liberté",
+        "Sicap Liberté 1", "Sicap Liberté 2", "Sicap Liberté 3",
+        "Sicap Mermoz", "Sicap Sacré-Cœur",
+        "Sud Foire", "Thiaroye sur Mer", "Virage",
+        "Yoff", "Yoff Apecsy", "Yoff Layène", "Yoff Tonghor",
+        "Zone A", "Zone B"
     ],
-
     "Pikine": [
-        "Grand Standing", "Cité Ousmane Ngom", "Quartiers universitaires", "Centre-ville",
-        "Thiaroye", "Yeumbeul", "Sam Notaire", "Golf Sud", "Guinaw Rails",
-        "Dalifort", "Pikine Nord", "Pikine Ouest", "Wakhinane Nimzatt",
-        "Ndiarème Limamoulaye", "Hamo", "Médina Gounass", "Malika",
-        "Djiddah Thiaroye Kao", "Tivaouane Diacksao", "Mbao",
+        "Aïnoumady",
+        "Cité Dalifort", "Cité Douanes", "Cité Khadim Rassoul", "Cité Millionnaire",
+        "Cité Mixta", "Cité Ousmane Ngom", "Cité Soprim", "Cité des Enseignants",
+        "Dalifort", "Dalifort Nord", "Dalifort-Foirail", "Dalifort-Shell", "Darou Salam",
+        "Diamaguène", "Diamaguène Sicap Mbao",
+        "Djiddah Thiaroye Kao",
+        "Golf Nord", "Golf Sud", "Grand Standing",
+        "Guinaw Rail Escale", "Guinaw Rail Nord", "Guinaw Rail Sud",
+        "Guinaw Rails", "Guinaw Rails Nord", "Guinaw Rails Sud",
+        "Hamo 1", "Hamo 2", "Hamo 3", "Hamo 4", "Hamo 5", "Hamo 6",
+        "Lansar",
+        "Limamoulaye", "Limamoulaye 1", "Limamoulaye 2",
+        "Malika", "Malika Keur Massar", "Malika Plage",
+        "Mbao", "Mbao Village",
+        "Médina Gounass", "Médina Gounass 1", "Médina Gounass 2",
+        "Ndialgassette", "Ndiarème", "Ndiarème Limamoulaye",
+        "Nimzatt", "Nimzatt Centre",
+        "Pikine Ancien Marché", "Pikine Centre", "Pikine Dagoudane", "Pikine Dagoudane Rue 10",
+        "Pikine Est", "Pikine Icotaf", "Pikine Irrégulier Centre", "Pikine Irrégulier Nord",
+        "Pikine Irrégulier Sud", "Pikine Nord", "Pikine Nord Guinaw Rail", "Pikine Ouest",
+        "Pikine Rue 10", "Pikine Tally Boubess", "Pikine Techno Pole",
+        "Quartier Universitaire",
+        "Sam Notaire", "Sam Notaire 1", "Sam Notaire 2",
+        "Sicap Mbao",
+        "Tally Bou Bess", "Tally Boumack", "Tally Diallo",
+        "Thiaroye", "Thiaroye Azur", "Thiaroye Aïnoumady", "Thiaroye Gare",
+        "Thiaroye Kao", "Thiaroye sur Mer",
+        "Tivaouane Diacksao",
+        "Wakhinane", "Wakhinane Nimzatt",
+        "Yeumbeul", "Yeumbeul Comico", "Yeumbeul Nord", "Yeumbeul Stade", "Yeumbeul Sud"
     ],
-
     "Rufisque": [
-        "Rufisque Centre", "Diaksao", "Bargny", "Sendou", "Diamniadio", "Sébi Ponty",
-        "Golf", "Médina Rufisque", "Cité Sipres", "Gouye Mouride",
-        "Jaxay", "Niaga", "Yène", "Tassette", "Bargny Minam",
+        "Arafat Diaksao",
+        "Bambilor", "Bargny", "Bargny Minam", "Bargny Technopole",
+        "Cité Comico", "Cité Sipres", "Cité Teylium",
+        "Diaksao", "Diaksao 1", "Diaksao 2",
+        "Diamniadio", "Diamniadio Pôle Urbain", "Diamniadio Technopole",
+        "Dougar",
+        "Golf", "Golf 1", "Golf 2", "Gouye Mouride",
+        "Jaxay", "Jaxay Parcelles",
+        "Keur Massar Rufisque", "Keur Mbaye Fall", "Keur Ndiaye Lô",
+        "Médina Gounass Rufisque", "Médina Rufisque",
+        "Niaga",
+        "Rufisque Centre", "Rufisque Escale", "Rufisque Nord", "Rufisque Plateau",
+        "Rufisque Port", "Rufisque Sud",
+        "Sangalkam", "Sebikotane", "Sendou", "Sendou Village", "Sébi Kaw", "Sébi Ponty",
+        "Tassette", "Tivaouane Peulh", "Tivaouane Peulh Mbao", "Tivaouane Peulh Niaga",
+        "Yène", "Yène Village"
     ],
-
     "Guédiawaye": [
-        "Médina Gounass", "Golf Sud", "Ndiarème Limamoulaye", "Wakhinane Nimzatt",
-        "Sam Notaire", "Hamo", "Golf Nord", "Sahm", "Ndiarème",
+        "Angle Mousse",
+        "Cité Enseignants Guédiawaye", "Cité Millionnaire Guédiawaye",
+        "Golf Escale", "Golf Nord", "Golf Sud",
+        "Hamo 1", "Hamo 2", "Hamo 3", "Hamo 4", "Hamo 5", "Hamo 6",
+        "Hamo Castor", "Hamo Golf",
+        "Kip Koko",
+        "Limamoulaye", "Limamoulaye 1", "Limamoulaye 2", "Limamoulaye 3",
+        "Médina Gounass", "Médina Gounass 1", "Médina Gounass 2", "Médina Gounass 3", "Médina Gounass Rail",
+        "Ndiarème", "Ndiarème 1", "Ndiarème 2", "Ndiarème 3", "Ndiarème Limamoulaye",
+        "Nimzatt", "Nimzatt 1", "Nimzatt 2",
+        "Sahm", "Sahm 1", "Sahm 2", "Sahm Notaire",
+        "Sam Notaire", "Sam Notaire 1", "Sam Notaire 2", "Sam Notaire 3",
+        "Wakhinane", "Wakhinane 1", "Wakhinane 2", "Wakhinane 3", "Wakhinane Nimzatt"
     ],
-
     "Keur Massar": [
-        "Keur Massar Centre", "Keur Massar Nord", "Yeumbeul Nord", "Bambilor",
-        "Sangalkam", "Tivaouane Peulh", "Lac Rose", "Kounoune", "Malika",
+        "Bambilor", "Bambilor Technopole", "Bambilor Village",
+        "Boune", "Boune Village",
+        "Darou Khoudoss", "Darou Khoudoss Village",
+        "Diaksao Keur Massar", "Diamaguène Keur Massar",
+        "Jaxaay", "Jaxaay Parcelles", "Jaxay Niakoul Rap",
+        "Keur Massar Centre", "Keur Massar Extension", "Keur Massar Nord",
+        "Keur Massar Nord 1", "Keur Massar Nord 2", "Keur Massar Ville", "Keur Ndiaye Lô",
+        "Kounoune", "Kounoune Extension", "Kounoune Village",
+        "Lac Rose",
+        "Malika", "Malika Nord", "Malika Plage", "Malika Sud",
+        "Mbao Keur Massar", "Mbawane",
+        "Niaga Lac Rose", "Niakoul Rap", "Niakoul Rap Village",
+        "Retba",
+        "Sangalkam", "Sangalkam Extension", "Sangalkam Village",
+        "Tivaouane Peulh", "Tivaouane Peulh Mbao", "Tivaouane Peulh Niaga",
+        "Yeumbeul Nord", "Yeumbeul Nord Cité Mbao", "Yeumbeul Stade"
     ],
 
-    # RÉGION DE SAINT-LOUIS
+    # ---------------------------------------------------------
+    # 2. RÉGION DE SAINT-LOUIS
+    # ---------------------------------------------------------
     "Saint-Louis": [
-        "Île Saint-Louis", "Sor", "Guet Ndar", "Dakhar Bango", "Gandiol",
-        "Ndar Toute", "Pikine Saint-Louis", "Balacoss", "Ndiolofène", "Léona",
-        "Eaux Claires", "Khor", "Diamaguène", "Corniche", "Hydrobase", "Sanar",
-        "Goxumbacc", "Darou", "Nord", "Médina Course", "Quartier Ndiaye",
+        "Balacoss", "Corniche", "Dakhar Bango", "Darou", "Diamaguène",
+        "Eaux Claires", "Gandiol", "Goxumbacc", "Guet Ndar", "Hydrobase",
+        "Khor", "Léona", "Médina Course", "Ndar Toute", "Ndiolofène",
+        "Nord", "Pikine Saint-Louis", "Quartier Ndiaye", "Sanar", "Sor",
+        "Île Saint-Louis"
     ],
-
     "Dagana": [
-        "Richard Toll", "Ross Béthio", "Dagana Centre", "Ronkh", "Mbane",
-        "Rosso Sénégal", "Gaé Dagana", "Bokhol", "Diama",
+        "Bokhol", "Dagana Centre", "Diama", "Gaé Dagana", "Mbane",
+        "Richard Toll", "Ronkh", "Ross Béthio", "Rosso Sénégal"
     ],
-
     "Podor": [
-        "Podor Centre", "Golléré", "Ndioum", "Guédé Village", "Guédé Chantier",
-        "Thilogne", "Gamadji Saré", "Démette", "Fanaye", "Pété", "Doumga Lao",
+        "Doumga Lao", "Démette", "Fanaye", "Gamadji Saré", "Golléré",
+        "Guédé Chantier", "Guédé Village", "Ndioum", "Podor Centre", "Pété",
+        "Thilogne"
     ],
 
-    # RÉGION DE LOUGA
+    # ---------------------------------------------------------
+    # 3. RÉGION DE LOUGA
+    # ---------------------------------------------------------
     "Louga": [
-        "Escale", "Léona", "Bongane", "Médina Mbaba", "Quartiers autour du marché central",
-        "Keur Serigne Louga", "Quartier Ndiaye", "Quartier Artisanal", "Montagne",
-        "Santhiaba", "Artillerie", "Touba Seras", "Grand Louga", "Cité Port",
-        "Ngagne", "Darou Mousty", "Sakhal",
+        "Artillerie", "Bongane", "Cité Port", "Darou Mousty", "Escale",
+        "Grand Louga", "Keur Serigne Louga", "Léona", "Montagne", "Médina Mbaba",
+        "Ngagne", "Quartier Artisanal", "Quartier Ndiaye", "Quartiers autour du marché central",
+        "Sakhal", "Santhiaba", "Touba Seras"
     ],
-
     "Kébémer": [
-        "Kébémer Centre", "Ndande", "Leur Gare", "Sagatta Djolof",
-        "Darou Mousty Kébémer", "Thieppe", "Guinguinéo Kébémer",
+        "Darou Mousty Kébémer", "Guinguinéo Kébémer", "Kébémer Centre", "Leur Gare",
+        "Ndande", "Sagatta Djolof", "Thieppe"
     ],
-
     "Linguère": [
-        "Linguère Centre", "Dodji", "Yang Yang", "Barkédji", "Dahra",
-        "Labgar", "Tessékéré", "Ouarkhokh", "Thiargny",
+        "Barkédji", "Dahra", "Dodji", "Labgar", "Linguère Centre",
+        "Ouarkhokh", "Tessékéré", "Thiargny", "Yang Yang"
     ],
 
-    # RÉGION DE ZIGUINCHOR
+    # ---------------------------------------------------------
+    # 4. RÉGION DE ZIGUINCHOR
+    # ---------------------------------------------------------
     "Ziguinchor": [
-        "Lyndiane", "Santhiaba", "Tilène", "Kandialang", "Djibélor", "Bourofaye",
-        "Néma", "Diabir", "Boucotte", "Escale", "Castors", "Belfort", "Peyrissac",
-        "Kandé", "Coboda", "Colobane", "Lindiane", "Grand Dakar", "Quinzambougou",
-        "Boulevard", "Kansahoudy", "Boutoupa",
+        "Belfort", "Boucotte", "Boulevard", "Bourofaye", "Boutoupa",
+        "Castors", "Coboda", "Colobane", "Diabir", "Djibélor",
+        "Escale", "Grand Dakar", "Kandialang", "Kandé", "Kansahoudy",
+        "Lindiane", "Lyndiane", "Néma", "Peyrissac", "Quinzambougou",
+        "Santhiaba", "Tilène"
     ],
-
     "Bignona": [
-        "Bignona Centre", "Thionck Essyl", "Diouloulou", "Kafountine",
-        "Tendouck", "Mangagoulack", "Kartiack", "Niafarang", "Elinkine",
+        "Bignona Centre", "Diouloulou", "Elinkine", "Kafountine", "Kartiack",
+        "Mangagoulack", "Niafarang", "Tendouck", "Thionck Essyl"
     ],
-
     "Oussouye": [
-        "Oussouye Centre", "Cap Skirring", "Cabrousse", "Diembéring",
-        "Mlomp", "Kabrousse Station", "Eloubalir",
+        "Cabrousse", "Cap Skirring", "Diembéring", "Eloubalir", "Kabrousse Station",
+        "Mlomp", "Oussouye Centre"
     ],
 
-    # RÉGION DE DIOURBEL
+    # ---------------------------------------------------------
+    # 5. RÉGION DE DIOURBEL
+    # ---------------------------------------------------------
     "Diourbel": [
-        "Ndame", "Ngoye", "Tock", "Keur Goumack", "Darou Salam Ndame",
-        "Quartier Thiamène", "Champ de Courses",
+        "Champ de Courses", "Darou Salam Ndame", "Keur Goumack", "Ndame",
+        "Ngoye", "Quartier Thiamène", "Tock"
     ],
-
     "Bambey": [
-        "Bambey Centre", "Keur Samba Kane", "Lambaye", "Ngoye Bambey",
-        "Réfane", "Bary", "Ndondol",
+        "Bambey Centre", "Bary", "Keur Samba Kane", "Lambaye", "Ndondol",
+        "Ngoye Bambey", "Réfane"
     ],
-
     "Mbacké": [
-        "Quartiers autour de Touba Mosquée", "Darou Khoudoss", "Gouye Mbind",
-        "Médinatoul", "Keur Cheikh", "Darou Miname", "Darou Marnane",
-        "Dianatoul Mahwa", "Guédé", "Héliport", "Touba Al Azhar",
-        "Boukhatoul Moubarak", "Khaïra", "Ndamatou",
-        "Darou Rahmane", "Darou Nahim", "Ndindy", "Darou Salam Type",
+        "Boukhatoul Moubarak", "Dianatoul Mahwa", "Darou Khoudoss", "Darou Marnane",
+        "Darou Miname", "Darou Nahim", "Darou Rahmane", "Darou Salam Type",
+        "Gouye Mbind", "Guédé", "Héliport", "Keur Cheikh", "Khaïra",
+        "Médinatoul", "Ndamatou", "Ndindy", "Quartiers autour de Touba Mosquée",
+        "Touba Al Azhar"
     ],
 
-    # RÉGION DE THIÈS
+    # ---------------------------------------------------------
+    # 6. RÉGION DE THIÈS
+    # ---------------------------------------------------------
     "Thiès": [
-        "Ndiagne", "Quartiers périphériques", "Grand Thiès", "Cité Lamy",
-        "Quartier Médina Fall", "Dixième", "Som", "Hersent", "Diakhao",
-        "Ballabey", "Cité Malick Sy", "Sampathé", "Ibrahima Sarr", "Silhouette",
-        "Tak hikaw", "Randoulène Nord", "Foire", "Nguinth", "Touba Toul",
+        "Ballabey", "Cité Lamy", "Cité Malick Sy", "Diakhao", "Dixième",
+        "Foire", "Grand Thiès", "Hersent", "Ibrahima Sarr", "Ndiagne",
+        "Nguinth", "Quartier Médina Fall", "Quartiers périphériques", "Randoulène Nord",
+        "Sampathé", "Silhouette", "Som", "Tak hikaw", "Touba Toul"
     ],
-
     "M'bour": [
-        "Mbour 1", "Mbour 2", "Mbour 3", "Saly Portudal", "Saly Niakhniakhal",
-        "Ngaparou", "Somone", "Nianing", "Popenguine", "Malicounda",
-        "Thiadiaye", "Joal-Fadiouth", "Palmarin Facao",
+        "Joal-Fadiouth", "Malicounda", "Mbour 1", "Mbour 2", "Mbour 3",
+        "Ngaparou", "Nianing", "Palmarin Facao", "Popenguine",
+        "Saly Niakhniakhal", "Saly Portudal", "Somone", "Thiadiaye"
     ],
-
     "Tivaouane": [
-        "Tivaouane Centre", "Mékhé", "Pout", "Kayar", "Taïba Ndiaye",
-        "Notto Diobass", "Koul", "Darou Khoudoss Tivaouane",
+        "Darou Khoudoss Tivaouane", "Kayar", "Koul", "Mékhé", "Notto Diobass",
+        "Pout", "Taïba Ndiaye", "Tivaouane Centre"
     ],
 
-    # RÉGION DE FATICK
+    # ---------------------------------------------------------
+    # 7. RÉGION DE FATICK
+    # ---------------------------------------------------------
     "Fatick": [
-        "Mindiss", "Escale Fatick", "Peulgha", "Logandème", "Darou Salam",
-        "Djilass", "Passy", "Tattaguine", "Loul Sessène", "Nioro Alassane Tall",
+        "Darou Salam", "Djilass", "Escale Fatick", "Logandème", "Loul Sessène",
+        "Mindiss", "Nioro Alassane Tall", "Passy", "Peulgha", "Tattaguine"
     ],
-
     "Foundiougne": [
-        "Foundiougne Centre", "Toubacouta", "Soum", "Dionewar", "Mbam",
-        "Ndangane", "Djilor", "Niodior", "Bassoul",
+        "Bassoul", "Dionewar", "Djilor", "Foundiougne Centre", "Mbam",
+        "Ndangane", "Niodior", "Soum", "Toubacouta"
     ],
-
     "Gossas": [
-        "Gossas Centre", "Colobane Gossas", "Ouadiour", "Patar Sine",
+        "Colobane Gossas", "Gossas Centre", "Ouadiour", "Patar Sine"
     ],
 
-    # RÉGION DE MATAM
+    # ---------------------------------------------------------
+    # 8. RÉGION DE MATAM
+    # ---------------------------------------------------------
     "Matam": [
-        "Matam Rive Gauche", "Ourossogui", "Waoundé", "Sinthiou Bamambé",
-        "Gaé Matam", "Nguidilé", "Nabadji Civol", "Ogo", "Diamel", "Navel",
+        "Diamel", "Gaé Matam", "Matam Rive Gauche", "Nabadji Civol", "Navel",
+        "Nguidilé", "Ogo", "Ourossogui", "Sinthiou Bamambé", "Waoundé"
     ],
-
     "Kanel": [
-        "Kanel Centre", "Sémé", "Orkadière Kanel", "Wouro Sidy",
-        "Agnam Civol", "Orkadiéré", "Bokidiawé",
+        "Agnam Civol", "Bokidiawé", "Kanel Centre", "Orkadière Kanel",
+        "Orkadiéré", "Sémé", "Wouro Sidy"
     ],
-
     "Ranérou-Ferlo": [
-        "Ranérou Ferlo", "Vélingara Ranérou", "Lougré Thioly",
-        "Vélingara Ferlo", "Soubalo", "Gourel Serigne",
+        "Gourel Serigne", "Lougré Thioly", "Ranérou Ferlo", "Soubalo",
+        "Vélingara Ferlo", "Vélingara Ranérou"
     ],
 
-    # RÉGION DE TAMBACOUNDA
+    # ---------------------------------------------------------
+    # 9. RÉGION DE TAMBACOUNDA
+    # ---------------------------------------------------------
     "Tambacounda": [
-        "Dépôt", "Pont", "Gourel", "Quartiers proches de la gare",
-        "Quartier Liberté", "Quartier Plateau", "Quartier Médina Coura",
-        "Quinzambougou", "Abattoirs", "Saré Guilél", "Salikéné",
-        "Diallobougou", "Sinthiang", "Saré Yoba", "Plateau Tambacounda",
+        "Abattoirs", "Diallobougou", "Dépôt", "Gourel", "Plateau Tambacounda",
+        "Pont", "Quartier Liberté", "Quartier Médina Coura", "Quartier Plateau",
+        "Quartiers proches de la gare", "Quinzambougou", "Salikéné", "Saré Guilél",
+        "Saré Yoba", "Sinthiang"
     ],
-
     "Bakel": [
-        "Bakel Centre", "Kidira", "Moudéry", "Gabou", "Kéniéba",
-        "Diawara", "Ballou", "Yaféra",
+        "Bakel Centre", "Ballou", "Diawara", "Gabou", "Kidira",
+        "Kéniéba", "Moudéry", "Yaféra"
     ],
-
     "Goudiry": [
-        "Goudiry Centre", "Sinthiou Fissa", "Kouthiaba", "Bala",
+        "Bala", "Goudiry Centre", "Kouthiaba", "Sinthiou Fissa"
     ],
-
     "Koumpentoum": [
-        "Koumpentoum Centre", "Missirah Wadène", "Malem Niani",
-        "Bamba Thialène", "Ndoga Babacar",
+        "Bamba Thialène", "Koumpentoum Centre", "Malem Niani", "Missirah Wadène", "Ndoga Babacar"
     ],
 
-    # RÉGION DE KOLDA
+    # ---------------------------------------------------------
+    # 10. RÉGION DE KOLDA
+    # ---------------------------------------------------------
     "Kolda": [
-        "Doumassou", "Gadapara", "Quartiers en extension urbaine",
-        "Quartier Fafacourou", "Quartier Sikilo", "Quartier Doumassou Nord",
-        "Bouna Kane", "Hilèle", "Saré Kémo", "Ndiobène", "Médina Chérif",
-        "Sinthiang Tamba", "Bagadadji", "Saré Yoro Bana", "Salikégné Kolda",
+        "Bagadadji", "Bouna Kane", "Doumassou", "Gadapara", "Hilèle",
+        "Médina Chérif", "Ndiobène", "Quartier Doumassou Nord", "Quartier Fafacourou",
+        "Quartier Sikilo", "Quartiers en extension urbaine", "Salikégné Kolda",
+        "Saré Kémo", "Saré Yoro Bana", "Sinthiang Tamba"
     ],
-
     "Vélingara": [
-        "Vélingara Centre", "Linkéring", "Kounkané", "Paroumba",
-        "Saré Coly Sallé", "Diaobé", "Bonconto",
+        "Bonconto", "Diaobé", "Kounkané", "Linkéring", "Paroumba",
+        "Saré Coly Sallé", "Vélingara Centre"
     ],
-
     "Médina Yoro Foulah": [
-        "Médina Yoro Foulah Centre", "Pata", "Niaming", "Bignarabé",
+        "Bignarabé", "Médina Yoro Foulah Centre", "Niaming", "Pata"
     ],
 
-    # RÉGION DE KAFFRINE
+    # ---------------------------------------------------------
+    # 11. RÉGION DE KAFFRINE
+    # ---------------------------------------------------------
     "Kaffrine": [
-        "Gniby", "Katakel", "Diamagadio", "Quartier Médina Kaffrine",
-        "Quartier Diamaguène", "Quartier Escale Kaffrine", "Kaffrine 2",
-        "Ndiogou", "Toune Mosquée", "Nganda", "Sagna",
+        "Diamagadio", "Gniby", "Kaffrine 2", "Katakel", "Nganda",
+        "Ndiogou", "Quartier Diamaguène", "Quartier Escale Kaffrine",
+        "Quartier Médina Kaffrine", "Sagna", "Toune Mosquée"
     ],
-
     "Birkelane": [
-        "Birkelane Centre", "Kahi", "Mabo", "Touba Mosquée Birkelane",
+        "Birkelane Centre", "Kahi", "Mabo", "Touba Mosquée Birkelane"
     ],
-
     "Koungheul": [
-        "Koungheul Centre", "Ida Mouride", "Ribot Escale", "Lour Escale",
-        "Missirah Koungheul", "Passa",
+        "Ida Mouride", "Koungheul Centre", "Lour Escale", "Missirah Koungheul",
+        "Passa", "Ribot Escale"
     ],
-
     "Malem-Hodar": [
-        "Malem Hodar Centre", "Kouthia Kayemor", "Ndième", "Saly Escale",
+        "Kouthia Kayemor", "Malem Hodar Centre", "Ndième", "Saly Escale"
     ],
 
-    # RÉGION DE SÉDHIOU
+    # ---------------------------------------------------------
+    # 12. RÉGION DE SÉDHIOU
+    # ---------------------------------------------------------
     "Sédhiou": [
-        "Marsassoum", "Diendé", "Djibabouya", "Dianah Malary",
-        "Quartier Sédhiou Escale", "Quartier Boudié",
-        "Julescounda", "Moricounda", "Santhie", "Doumassou Sédhiou",
-        "Simbandi Balante", "Tanaf", "Diattacounda", "Ouro Sogui", "Baghere",
+        "Baghere", "Diendé", "Dianah Malary", "Diattacounda", "Djibabouya",
+        "Doumassou Sédhiou", "Julescounda", "Marsassoum", "Moricounda",
+        "Ouro Sogui", "Quartier Boudié", "Quartier Sédhiou Escale",
+        "Santhie", "Simbandi Balante", "Tanaf"
     ],
-
     "Bounkiling": [
-        "Bounkiling Centre", "Bounkiling Escale", "Djibanar", "Inor", "Ndiamalathiel",
+        "Bounkiling Centre", "Bounkiling Escale", "Djibanar", "Inor", "Ndiamalathiel"
     ],
-
     "Goudomp": [
-        "Goudomp Centre", "Samine", "Kaour", "Djilacolon", "Diabougou",
+        "Diabougou", "Djilacolon", "Goudomp Centre", "Kaour", "Samine"
     ],
 
-    # RÉGION DE KÉDOUGOU
+    # ---------------------------------------------------------
+    # 13. RÉGION DE KÉDOUGOU
+    # ---------------------------------------------------------
     "Kédougou": [
-        "Saraya", "Bandafassi", "Quartier Dandé", "Quartier Fongolimbi",
-        "Quartier Ethiolo", "Mosquée", "Lawol Tamba", "Gadior", "Dalaba",
-        "Dimboli", "Dindefello", "Ninéfécha",
+        "Bandafassi", "Dalaba", "Dimboli", "Dindefello", "Gadior",
+        "Lawol Tamba", "Mosquée", "Ninéfécha", "Quartier Dandé",
+        "Quartier Ethiolo", "Quartier Fongolimbi", "Saraya"
     ],
-
     "Salémata": [
-        "Salemata Centre", "Khossanto", "Tomboronkoto", "Dakately",
+        "Dakately", "Khossanto", "Salemata Centre", "Tomboronkoto"
     ],
-
     "Saraya": [
-        "Saraya Centre", "Bembou", "Médina Baffe", "Sabodala Centre",
-        "Missirah Sirimana", "Khéréba",
+        "Bembou", "Khéréba", "Médina Baffe", "Missirah Sirimana",
+        "Sabodala Centre", "Saraya Centre"
     ],
 
-    # RÉGION DE KAOLACK
+    # ---------------------------------------------------------
+    # 14. RÉGION DE KAOLACK
+    # ---------------------------------------------------------
     "Kaolack": [
-        "Médina Baye", "Léona", "Kasnack", "Ndangane", "Sam",
-        "Quartier Central", "Escale Kaolack", "Sara", "Boustane",
-        "Kassaville", "Thioffior", "Touba Kaolack", "Ndorong Kaolack",
+        "Boustane", "Escale Kaolack", "Kasnack", "Kassaville", "Léona",
+        "Médina Baye", "Ndangane", "Ndorong Kaolack", "Quartier Central",
+        "Sam", "Sara", "Thioffior", "Touba Kaolack"
     ],
-
     "Nioro du Rip": [
-        "Nioro Centre", "Médina Sabakh", "Porokhane", "Keur Madiabel",
-        "Kayemor", "Paoskoto Nioro", "Wack Ngouna",
+        "Kayemor", "Keur Madiabel", "Médina Sabakh", "Nioro Centre",
+        "Paoskoto Nioro", "Porokhane", "Wack Ngouna"
     ],
-
     "Guinguinéo": [
-        "Guinguinéo Centre", "Guinguinéo Kaolack", "Ngayène", "Paoskoto",
-        "Ngathie Naoudé", "Keur Samba Guèye", "Fao",
-        "Kahone Centre", "Gandiaye", "Ndoffane", "Sibassor", "Latmingué",
-        "Keur Socé", "Mbadakhoune", "Ndiaffate", "Thiomby",
-    ],
+        "Fao", "Gandiaye", "Guinguinéo Centre", "Guinguinéo Kaolack",
+        "Kahone Centre", "Keur Samba Guèye", "Keur Socé", "Latmingué",
+        "Mbadakhoune", "Ndiaffate", "Ndoffane", "Ngathie Naoudé",
+        "Ngayène", "Paoskoto", "Sibassor", "Thiomby"
+    ]
 }

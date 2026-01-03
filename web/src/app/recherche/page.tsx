@@ -5,9 +5,14 @@ import type { ElementType } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth.store";
-import Link from "next/link"; // [Correction] Import de Link pour la navigation
+import Link from "next/link";
 
-import { getAllJobs, getLocationsTree, type LocationNode } from "@/lib/catalog.api";
+import {
+  getAllJobs,
+  getLocationsTree,
+  getDistrictsFromDepartment,
+  type LocationNode
+} from "@/lib/catalog.api";
 import {
   rechercherPros,
   listFavoris,
@@ -73,6 +78,9 @@ function SearchableSelect({ options, value, onChange, placeholder, icon: Icon, d
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Correction Hydratation : Variable unique sans retours à la ligne
+  const dropdownClassName = "absolute top-full left-0 mt-1 w-full z-[9999] rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 max-h-[60vh] flex flex-col overflow-hidden";
+
   const selectedLabel = useMemo(() => options.find((o) => o.id === value)?.label || "", [options, value]);
 
   useEffect(() => {
@@ -112,20 +120,20 @@ function SearchableSelect({ options, value, onChange, placeholder, icon: Icon, d
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 mt-1 w-full z-50 rounded-xl border border-white/10 bg-zinc-900 shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-100 max-h-60 flex flex-col">
-          <div className="relative mb-2 shrink-0">
-            <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
-            <input
-              autoFocus
-              type="text"
-              placeholder="Filtrer..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg bg-black/50 border border-white/5 py-1.5 pl-8 pr-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
-            />
-          </div>
+        <div className={dropdownClassName}>
+            <div className="relative mb-2 shrink-0">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Filtrer..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-lg bg-black/50 border border-white/5 py-1.5 pl-8 pr-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50"
+              />
+            </div>
 
-          <div className="overflow-y-auto custom-scrollbar flex flex-col gap-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col gap-1">
             <button
               type="button"
               onClick={() => {
@@ -184,7 +192,9 @@ function SearchContent() {
   const [districtId, setDistrictId] = useState<number | "">(toInt(sp.get("zone_geographique"), 0) || "");
 
   const [rawQ, setRawQ] = useState(sp.get("search") || "");
-  const [statut, setStatut] = useState<"" | "ONLINE" | "OFFLINE">((sp.get("statut_en_ligne") as any) || "");
+
+  // Correction: "ONLINE" par défaut si pas de paramètre URL
+  const [statut, setStatut] = useState<"ONLINE" | "OFFLINE" | "">((sp.get("statut_en_ligne") as any) || "ONLINE");
 
   // Géolocalisation
   const [lat, setLat] = useState<number | undefined>(sp.get("lat") ? Number(sp.get("lat")) : undefined);
@@ -228,7 +238,6 @@ function SearchContent() {
     const params = new URLSearchParams();
 
     if (metier) params.set("metier", String(metier));
-    // On filtre par quartier (id)
     if (districtId) params.set("zone_geographique", String(districtId));
 
     if (debouncedQ) params.set("search", debouncedQ);
@@ -254,31 +263,31 @@ function SearchContent() {
   const departmentOptions = useMemo(() => {
       if (!regionId || !locsTree) return [];
       const region = locsTree.find((r) => r.id === regionId);
-
-      // Garde uniquement les DEPARTMENTS (ceux qui ont les DISTRICTS comme enfants)
       const deps = (region?.children ?? []).filter((n: any) => n.type === "DEPARTMENT");
-
-      // Optionnel: dédoublonnage par label si ta base contient des incohérences
       const seen = new Set<string>();
       return deps
         .map((d: any) => ({ id: d.id, label: d.name }))
         .filter((o) => (seen.has(o.label) ? false : (seen.add(o.label), true)));
     }, [regionId, locsTree]);
 
-
+  // ✅ CORRECTION: Utilise getDistrictsFromDepartment pour récupérer les quartiers
   const districtOptions = useMemo(() => {
-      if (!regionId || !departmentId || !locsTree) return [];
-      const region = locsTree.find((r) => r.id === regionId);
+    if (!regionId || !departmentId || !locsTree) return [];
 
-      const dept = (region?.children ?? []).find((d: any) => d.id === departmentId && d.type === "DEPARTMENT");
-      return (dept?.children ?? []).map((q: any) => ({ id: q.id, label: q.name }));
-    }, [regionId, departmentId, locsTree]);
+    // 1. Trouver la Région
+    const region = locsTree.find((r) => r.id === regionId);
+    // 2. Trouver le Département
+    const dept = (region?.children ?? []).find((d: any) => d.id === departmentId && d.type === "DEPARTMENT");
+    if (!dept) return [];
 
+    // 3. ✅ UTILISER LE HELPER : Il va chercher les quartiers DANS les villes du département
+    const allDistricts = getDistrictsFromDepartment(dept);
+    return allDistricts.map((q: any) => ({ id: q.id, label: q.name }));
+  }, [regionId, departmentId, locsTree]);
 
   // Reset cascade zone
   useEffect(() => {
       if (!districtId || regionId || departmentId || !locsTree) return;
-
       for (const r of locsTree as any[]) {
         for (const d of r.children ?? []) {
           if (d.type !== "DEPARTMENT") continue;
@@ -291,7 +300,6 @@ function SearchContent() {
         }
       }
     }, [districtId, regionId, departmentId, locsTree]);
-
 
   // --- REQUÊTES PRINCIPALES ---
 
@@ -355,7 +363,8 @@ function SearchContent() {
     setDepartmentId("");
     setDistrictId("");
     setRawQ("");
-    setStatut("");
+    // Remettre ONLINE par défaut au reset (selon ton choix de design)
+    setStatut("ONLINE");
     setUseGeo(false);
     setPage(1);
     setLat(undefined);
@@ -383,7 +392,7 @@ function SearchContent() {
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-400">
             <Filter size={16} /> Filtres avancés
           </h2>
-          {(metier || regionId || departmentId || districtId || rawQ || statut || useGeo) && (
+          {(metier || regionId || departmentId || districtId || rawQ || (statut !== "ONLINE") || useGeo) && (
             <button
               type="button"
               onClick={resetFilters}
@@ -421,7 +430,7 @@ function SearchContent() {
 
           {/* Ville (Type Département Backend) */}
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-500">Ville</label> {/* [Correction] Libellé Ville */}
+            <label className="text-xs text-zinc-500">Ville</label>
             <SearchableSelect
               icon={MapPin}
               placeholder={!regionId ? "Choisir une région..." : "Toute ville"}
@@ -469,9 +478,9 @@ function SearchContent() {
                 onChange={(e) => setStatut(e.target.value as any)}
                 className="w-full appearance-none rounded-xl border border-white/10 bg-black py-2 pl-9 pr-8 text-sm outline-none focus:border-indigo-500 transition-all cursor-pointer"
               >
-                <option value="">Peu importe</option>
                 <option value="ONLINE">🟢 En Ligne</option>
                 <option value="OFFLINE">🔴 Hors Ligne</option>
+                <option value="">Peu importe</option>
               </select>
             </div>
           </div>
@@ -526,7 +535,7 @@ function SearchContent() {
 
               return (
                 <div key={p.id} className="flex flex-col gap-2">
-                  {/* [Correction] Wrap avec Link pour accès aux détails */}
+
                   <Link href={`/pros/${p.id}`} className="block transition-transform hover:scale-[1.01]">
                       <ProCard pro={p} isFavorite={isFav} onToggleFavori={(id) => toggleFavoriMutation.mutate(id)} />
                   </Link>

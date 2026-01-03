@@ -24,11 +24,14 @@ import {
   getAllJobs,
   getCategoriesTree,
   getLocationsTree,
+  getDistrictsFromDepartment,
   type Job,
   type CategoryNode,
   type LocationNode,
 } from "@/lib/catalog.api";
 import { registerPro, type RegisterPayload } from "@/lib/auth.api";
+
+// --- COMPOSANT SELECT ---
 
 interface Option {
   id: number | string;
@@ -110,11 +113,11 @@ function SearchableSelect({
           <div className="relative mb-2 shrink-0">
             <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
             <input
-              autoFocus
               type="text"
               placeholder="Filtrer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+
               className="w-full rounded-lg bg-black/50 border border-white/5 py-1.5 pl-8 pr-2 text-xs text-white focus:outline-none focus:border-indigo-500/50"
             />
           </div>
@@ -158,14 +161,14 @@ type FormValues = {
   nom_entreprise: string;
 
   // Cascade Métiers
-  cat_id: number; // Secteur
-  subcat_id: number; // Spécialité
-  job_id: number; // Métier final
+  cat_id: number;
+  subcat_id: number;
+  job_id: number;
 
-  // Cascade Zones (Région -> Ville -> Quartier)
+  // Cascade Zones
   region_id: number;
-  department_id: number; // Correspond à "Ville" ou Département administratif
-  district_id: number; // Quartier
+  department_id: number;
+  district_id: number;
 
   telephone_appel: string;
   telephone_whatsapp: string;
@@ -250,16 +253,25 @@ export default function ProRegisterPage() {
     return children.map((d: LocationNode) => ({ id: d.id, label: d.name }));
   }, [regionId, locsTree]);
 
+
   const districtOptions = useMemo(() => {
     if (!departmentId || !locsTree) return [];
+
+    // 1. Retrouver la région
     const region = locsTree.find((r: LocationNode) => r.id === regionId);
+    // 2. Retrouver le département (qui est parent des Villes/Quartiers)
     const dept = region?.children?.find((d: LocationNode) => d.id === departmentId);
-    const children = dept?.children ?? [];
-    return children.map((q: LocationNode) => ({ id: q.id, label: q.name }));
+
+    if (!dept) return [];
+
+    // 3. Aplatir la hiérarchie pour avoir les Quartiers
+    // (Dept -> City -> Districts) devient une liste plate de Districts
+    const districts = getDistrictsFromDepartment(dept);
+
+    return districts.map((q: LocationNode) => ({ id: q.id, label: q.name }));
   }, [regionId, departmentId, locsTree]);
 
   // --- 3. Reset cascade ---
-  // Reset quand le parent change
   useEffect(() => {
     if (subCatId !== 0) setValue("subcat_id", 0);
     if (jobId !== 0) setValue("job_id", 0);
@@ -291,7 +303,6 @@ export default function ProRegisterPage() {
     mutationFn: (data: RegisterPayload) => registerPro(data),
     onSuccess: (res) => {
       toast.success("Compte créé avec succès !");
-      // Redirection vers vérification WhatsApp (ou Login si désactivé)
       if (res.phone) {
          router.push(`/pro/verify?phone=${encodeURIComponent(res.phone)}`);
       } else {
@@ -300,7 +311,7 @@ export default function ProRegisterPage() {
     },
     onError: (err: any) => {
       console.error(err);
-      const msg = err.response?.data?.detail || "Erreur lors de l'inscription. Vérifiez vos données.";
+      const msg = err.response?.data?.detail || "Erreur lors de l'inscription.";
       toast.error(msg);
     },
   });
@@ -314,17 +325,17 @@ export default function ProRegisterPage() {
       password: v.password,
       nom_entreprise: v.nom_entreprise,
       metier_id: Number(v.job_id),
-      zone_id: Number(v.district_id), // Le quartier est le niveau le plus précis
+      zone_id: Number(v.district_id),
       telephone_appel: v.telephone_appel || v.phone,
       telephone_whatsapp: v.telephone_whatsapp || v.phone,
       latitude: v.latitude ?? null,
       longitude: v.longitude ?? null,
-      description: "", // Sera rempli dans le profil plus tard
+      description: "",
     });
   };
 
   const askGeo = () => {
-    if (!navigator.geolocation) return toast.error("Géolocalisation non supportée par ce navigateur.");
+    if (!navigator.geolocation) return toast.error("Géolocalisation non supportée.");
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -335,7 +346,7 @@ export default function ProRegisterPage() {
       },
       (err) => {
         console.error(err);
-        toast.error("Impossible d'obtenir la position. Vérifiez vos autorisations.");
+        toast.error("Impossible d'obtenir la position.");
         setGeoLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -345,7 +356,7 @@ export default function ProRegisterPage() {
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Créer un compte Pro</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Créer un compte Professionnel</h1>
         <p className="text-sm text-zinc-400">Rejoignez l'annuaire de référence au Sénégal.</p>
       </div>
 

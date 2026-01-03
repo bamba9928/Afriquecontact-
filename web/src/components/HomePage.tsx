@@ -154,16 +154,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => router.push("/recherche")}
-                  className="
-                    relative w-full overflow-hidden rounded-3xl border border-white/10
-                    bg-zinc-900/70 backdrop-blur-xl
-                    px-6 py-5 text-left
-                    shadow-2xl shadow-black/50
-                    transition-all duration-300
-                    hover:border-white/20 hover:bg-zinc-900/80
-                    active:scale-[0.99]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950
-                  "
+                  className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/70 backdrop-blur-xl px-6 py-5 text-left shadow-2xl shadow-black/50 transition-all duration-300 hover:border-white/20 hover:bg-zinc-900/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                   aria-label="Rechercher un professionnel par métier et localisation"
                 >
                   {/* Shimmer */}

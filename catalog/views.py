@@ -52,38 +52,50 @@ class LocationsListView(generics.ListAPIView):
             qs = qs.filter(parent_id=parent)
         return qs
 
-
 class LocationsTreeView(APIView):
     """
-    ✅ Arbre filtré pour le front:
-    REGION -> DEPARTMENT -> DISTRICT
-    (On exclut CITY et tout le reste pour éviter les doublons type "Mbacké")
+    Récupère l'arbre complet : REGION -> DEPARTMENT -> CITY -> DISTRICT
+    Le Frontend se chargera d'ignorer le niveau CITY pour l'affichage si besoin.
     """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        # Pays root (si tu veux, sinon on peut ignorer et renvoyer direct les régions)
-        senegal = Location.objects.filter(type=Location.Type.COUNTRY, slug="senegal").first()
-
+        # 1. Préparer les Districts (Quartiers)
         districts_qs = (
             Location.objects.filter(type=Location.Type.DISTRICT)
             .only("id", "name", "slug", "type", "parent_id")
             .order_by("name")
         )
 
+        # 2. Préparer les Villes (Cities) en incluant leurs Districts
+        cities_qs = (
+            Location.objects.filter(type=Location.Type.CITY)
+            .only("id", "name", "slug", "type", "parent_id")
+            .prefetch_related(
+                Prefetch(
+                    "children",
+                    queryset=districts_qs,
+                    to_attr="children_filtered" # Utilisé par le serializer
+                )
+            )
+            .order_by("name")
+        )
+
+        # 3. Préparer les Départements en incluant les Villes
         departments_qs = (
             Location.objects.filter(type=Location.Type.DEPARTMENT)
             .only("id", "name", "slug", "type", "parent_id")
             .prefetch_related(
                 Prefetch(
                     "children",
-                    queryset=districts_qs,
-                    to_attr="children_filtered",  # important pour serializer
+                    queryset=cities_qs,
+                    to_attr="children_filtered"
                 )
             )
             .order_by("name")
         )
 
+        # 4. Préparer les Régions en incluant les Départements
         regions_qs = (
             Location.objects.filter(type=Location.Type.REGION)
             .only("id", "name", "slug", "type", "parent_id")
@@ -91,14 +103,17 @@ class LocationsTreeView(APIView):
                 Prefetch(
                     "children",
                     queryset=departments_qs,
-                    to_attr="children_filtered",
+                    to_attr="children_filtered"
                 )
             )
             .order_by("name")
         )
 
+        # Filtrer par pays (facultatif mais propre)
+        senegal = Location.objects.filter(type=Location.Type.COUNTRY, slug="senegal").first()
         if senegal:
             regions_qs = regions_qs.filter(parent=senegal)
 
+        # Sérialisation
         data = LocationTreeSerializer(regions_qs, many=True).data
         return Response(data)

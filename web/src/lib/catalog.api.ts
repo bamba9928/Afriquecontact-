@@ -21,7 +21,7 @@ export type CategoryNode = {
   subcategories: CategoryNode[];
 };
 
-export type LocationType = "COUNTRY" | "REGION" | "DEPARTMENT" | "CITY" | "DISTRICT";
+export type LocationType = "COUNTRY" | "REGION" | "DEPARTMENT" | "CITY" | "DISTRICT" | "COMMUNE";
 
 // Structure hiérarchique des Lieux (Région -> Département/Ville -> Quartier)
 export type LocationNode = {
@@ -30,7 +30,7 @@ export type LocationNode = {
   slug: string;
   type: LocationType;
   children: LocationNode[];
-  // Champs additionnels éventuels renvoyés par le backend (non bloquants)
+  // Champs additionnels éventuels renvoyés par le backend
   parent?: number | null;
   type_display?: string;
 };
@@ -101,10 +101,20 @@ export async function getCategoriesTree(): Promise<CategoryNode[]> {
 // 3) Localisations (tree) : retourne une liste de REGIONS avec leur hiérarchie complète
 export async function getLocationsTree(): Promise<LocationNode[]> {
   try {
-    const { data } = await api.get("/api/catalog/locations/tree/");
+    // ✅ CORRECTIF PRINCIPAL : On force une très grande page pour avoir tout l'arbre
+    const { data } = await api.get("/api/catalog/locations/tree/", {
+      params: { page_size: 10000 }
+    });
 
-    // Normalisation : data peut être un objet racine ou directement un tableau
-    const root: any[] = Array.isArray(data) ? data : [data];
+    // Normalisation : data peut être un tableau, un objet racine, ou un objet paginé { results: [...] }
+    let rawList: any[] = [];
+    if (Array.isArray(data)) {
+        rawList = data;
+    } else if (data && Array.isArray(data.results)) {
+        rawList = data.results;
+    } else {
+        rawList = [data];
+    }
 
     const regions: LocationNode[] = [];
     const seenIds = new Set<number>();
@@ -117,7 +127,7 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
       for (const node of nodes ?? []) {
         if (!node) continue;
 
-        // On ne garde que les nœuds de type REGION
+        // On ne garde que les nœuds de type REGION à la racine
         if (node.type === "REGION") {
           if (!seenIds.has(node.id)) {
             const normalized = normalizeLocationNode(node);
@@ -128,14 +138,14 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
           }
         }
 
-        // Parcours récursif des enfants
+        // Parcours récursif des enfants (au cas où la région est imbriquée dans un PAYS)
         if (Array.isArray(node.children) && node.children.length > 0) {
           extractRegions(node.children);
         }
       }
     };
 
-    extractRegions(root);
+    extractRegions(rawList);
 
     // Tri alphabétique des régions
     return regions.sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -200,17 +210,24 @@ export function getDepartmentsFromRegion(region: LocationNode): LocationNode[] {
 
 /**
  * Utilitaire : Extraire tous les quartiers d'un département
+ * ✅ Amélioré pour gérer à la fois :
+ * 1. Département -> Quartier (structure plate)
+ * 2. Département -> Ville/Commune -> Quartier (structure profonde)
  */
 export function getDistrictsFromDepartment(department: LocationNode): LocationNode[] {
-  // Les quartiers sont sous CITY, qui est sous DEPARTMENT
-  const cities = (department.children ?? []).filter((child) => child.type === "CITY");
+  const directDistricts = (department.children ?? []).filter((c) => c.type === "DISTRICT");
 
-  const districts: LocationNode[] = [];
-  for (const city of cities) {
-    districts.push(...(city.children ?? []).filter((child) => child.type === "DISTRICT"));
+  // Chercher aussi dans les sous-niveaux (Villes ou Communes)
+  const nestedDistricts: LocationNode[] = [];
+  const subNodes = (department.children ?? []).filter((c) => c.type === "CITY" || c.type === "COMMUNE");
+
+  for (const node of subNodes) {
+      if(node.children) {
+          nestedDistricts.push(...node.children.filter((c) => c.type === "DISTRICT"));
+      }
   }
 
-  return districts;
+  return [...directDistricts, ...nestedDistricts];
 }
 
 /**
@@ -267,15 +284,8 @@ export function getLocationPath(
  * Utilitaire : Vérifier si un département contient des quartiers
  */
 export function departmentHasDistricts(department: LocationNode): boolean {
-  if (!department.children || department.children.length === 0) return false;
-
-  for (const city of department.children) {
-    if (city.type === "CITY" && city.children && city.children.length > 0) {
-      return true;
-    }
-  }
-
-  return false;
+    const districts = getDistrictsFromDepartment(department);
+    return districts.length > 0;
 }
 
 /**

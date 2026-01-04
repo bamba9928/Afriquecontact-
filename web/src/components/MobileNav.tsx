@@ -17,7 +17,7 @@ export function MobileNav() {
   const isConnected = isMounted && !!accessToken;
 
   const proTab = {
-    href: isConnected ? "/dashboard" : "/pro/login", // [Correction] Route conforme à dashboard/page.tsx
+    href: isConnected ? "/dashboard" : "/pro/login",
     label: isConnected ? "Dashboard" : "Espace Pro",
     icon: isConnected ? LayoutDashboard : LogIn,
   };
@@ -63,15 +63,18 @@ export function MobileNav() {
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              {/* Indicateur visuel */}
+              {/* Indicateur visuel avec la couleur BRAND */}
               <div
                 className={`rounded-full p-1 transition-all ${
                   active
-                    ? "bg-white/10 text-emerald-400"
+                    ? "bg-white/10 text-[#00FF00]" // Remplacement de emerald-400
                     : "bg-transparent"
                 }`}
               >
-                <Icon size={20} className={active ? "fill-emerald-400/20" : ""} />
+                <Icon
+                  size={20}
+                  className={active ? "fill-[#00FF00]/20" : ""} // Remplacement de fill-emerald-400/20
+                />
               </div>
 
               <span>{tab.label}</span>

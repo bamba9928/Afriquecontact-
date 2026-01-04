@@ -2,8 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getAds, trackAdClick } from "@/lib/ads.api";
-import { ExternalLink, Phone, MessageCircle, Volume2, VolumeX, PlayCircle } from "lucide-react";
-import { useState, useRef } from "react";
+import { mediaUrl } from "@/lib/media-url";
+import { ExternalLink, Phone, MessageCircle, Volume2, VolumeX, Sparkles, RefreshCcw } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { clsx } from "clsx";
 
 // Helper pour détecter si le fichier est une vidéo
 const isVideoFile = (url?: string) => {
@@ -12,14 +15,14 @@ const isVideoFile = (url?: string) => {
 };
 
 export default function PubPage() {
-  const { data: ads, isLoading, isError } = useQuery({
+  const { data: ads, isLoading, isError, refetch } = useQuery({
     queryKey: ["ads"],
     queryFn: getAds,
-    staleTime: 1000 * 60 * 5 // Cache de 5 minutes pour éviter de spammer le serveur
+    staleTime: 1000 * 60 * 5 // Cache de 5 minutes
   });
 
+  // Tracking "fire-and-forget"
   const handleAdClick = (id: number) => {
-    // Tracking "fire-and-forget"
     trackAdClick(id);
   };
 
@@ -27,35 +30,50 @@ export default function PubPage() {
 
   if (isError) {
     return (
-      <div className="flex h-60 items-center justify-center text-zinc-500">
-        <div className="text-center">
-          <p>Impossible de charger les partenaires.</p>
-          <button onClick={() => window.location.reload()} className="text-indigo-400 text-sm mt-2 hover:underline">Réessayer</button>
-        </div>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center text-center space-y-4">
+         <div className="p-4 rounded-full bg-red-500/10 text-red-500 mb-2">
+            <RefreshCcw size={32} />
+         </div>
+         <h2 className="text-xl font-bold text-white">Oups, une erreur est survenue</h2>
+         <p className="text-zinc-500">Impossible de charger les partenaires pour le moment.</p>
+         <button
+            onClick={() => refetch()}
+            className="px-6 py-2 rounded-xl bg-white text-black font-bold hover:bg-zinc-200 transition-colors"
+        >
+            Réessayer
+         </button>
       </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
+    <main className="mx-auto max-w-7xl px-4 py-12 space-y-12">
 
-      {/* En-tête */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Nos Partenaires</h1>
-          <p className="text-zinc-400 text-sm mt-1">Découvrez les offres exclusives de nos sponsors.</p>
-        </div>
-        <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full text-xs font-bold uppercase tracking-wider self-start md:self-center">
-          Sponsorisé
+      {/* --- HEADER --- */}
+      <div className="relative overflow-hidden rounded-3xl bg-zinc-900 border border-white/10 p-8 md:p-12 text-center">
+        {/* Background Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-[#00FF00]/5 to-transparent pointer-events-none" />
+
+        <div className="relative z-10 space-y-4">
+           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-widest">
+              <Sparkles size={12} /> Sponsors Officiels
+           </div>
+           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white">
+              Nos Partenaires
+           </h1>
+           <p className="text-zinc-400 max-w-2xl mx-auto text-lg">
+              Découvrez les entreprises qui soutiennent la communauté Sénégal Contact. Profitez d'offres exclusives et de services de qualité.
+           </p>
         </div>
       </div>
 
+      {/* --- GRID --- */}
       {(!ads || ads.length === 0) ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-white/5">
-          <p className="text-zinc-500">Aucune publicité active pour le moment.</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-white/10 rounded-3xl bg-white/5">
+          <p className="text-zinc-500 font-medium">Aucune campagne publicitaire active pour le moment.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {ads.map((ad: any) => (
             <AdCard key={ad.id} ad={ad} onTrack={() => handleAdClick(ad.id)} />
           ))}
@@ -65,10 +83,11 @@ export default function PubPage() {
   );
 }
 
-// --- Composant Carte Publicité (Extrait pour gérer l'état vidéo individuel) ---
+// --- SOUS-COMPOSANT CARTE (Isolé pour la gestion vidéo) ---
 
 function AdCard({ ad, onTrack }: { ad: any, onTrack: () => void }) {
-  const isVideo = isVideoFile(ad.fichier_url);
+  const fileUrl = ad.fichier_url || (ad.image ? mediaUrl(ad.image) : null);
+  const isVideo = isVideoFile(fileUrl);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -81,101 +100,106 @@ function AdCard({ ad, onTrack }: { ad: any, onTrack: () => void }) {
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 hover:bg-zinc-900 hover:border-white/20 transition-all shadow-lg hover:shadow-xl">
+    <article className="group flex flex-col h-full overflow-hidden rounded-3xl bg-zinc-900 border border-white/5 hover:border-white/10 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
 
-      {/* Zone Média (Image ou Vidéo) */}
-      <div className="relative aspect-video w-full bg-black overflow-hidden">
-        {ad.fichier_url ? (
+      {/* Zone Média (16/9) */}
+      <div className="relative aspect-video w-full bg-black overflow-hidden border-b border-white/5">
+        {fileUrl ? (
           isVideo ? (
             <div className="relative h-full w-full">
               <video
                 ref={videoRef}
-                src={ad.fichier_url}
+                src={fileUrl}
                 className="h-full w-full object-cover"
                 autoPlay
                 muted
                 loop
                 playsInline
               />
-              {/* Contrôle du son pour la vidéo */}
               <button
                 onClick={toggleMute}
-                className="absolute bottom-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition backdrop-blur-sm"
+                className="absolute bottom-4 right-4 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/80 transition backdrop-blur-md border border-white/10"
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
             </div>
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ad.fichier_url}
-              alt={ad.titre}
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            <div className="relative h-full w-full">
+                <Image
+                src={fileUrl}
+                alt={ad.titre || "Publicité"}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 33vw"
+                />
+            </div>
           )
         ) : (
-          <div className="flex h-full items-center justify-center text-zinc-600 bg-zinc-800">
-            <span className="text-xs font-medium uppercase">Média non disponible</span>
+          <div className="flex h-full items-center justify-center text-zinc-700 bg-zinc-800">
+             <Sparkles size={32} className="opacity-20" />
           </div>
         )}
 
-        {/* Badge Overlay */}
-        <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase">
-          Pub
+        {/* Badge Sponsorisé */}
+        <div className="absolute top-4 left-4 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold text-white/80 uppercase tracking-wide border border-white/10">
+          Sponsorisé
         </div>
       </div>
 
-      {/* Contenu & Actions */}
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-lg font-bold text-white mb-2 line-clamp-2" title={ad.titre}>
-          {ad.titre}
+      {/* Contenu */}
+      <div className="flex flex-1 flex-col p-6">
+        <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 leading-tight group-hover:text-[#00FF00] transition-colors" title={ad.titre}>
+          {ad.titre || "Partenaire Sénégal Contact"}
         </h3>
 
-        {/* Séparateur flexible */}
-        <div className="flex-1"></div>
+        {/* Description courte (optionnelle si dispo dans l'API, sinon on laisse vide pour aérer) */}
+        {ad.description && (
+             <p className="text-zinc-400 text-sm line-clamp-2 mb-4 leading-relaxed">
+                 {ad.description}
+             </p>
+        )}
 
-        <div className="mt-4 space-y-3 pt-4 border-t border-white/5">
+        <div className="flex-1" /> {/* Spacer */}
 
-          {/* Action Principale : Site Web */}
+        <div className="space-y-3 pt-4 mt-2">
+
+          {/* Bouton Site Web (Primary) */}
           {ad.lien_redirection && (
             <a
               href={ad.lien_redirection}
               target="_blank"
               rel="noreferrer"
               onClick={onTrack}
-              className="flex items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-bold text-black hover:bg-indigo-50 transition-colors w-full"
+              className="flex items-center justify-center gap-2 rounded-xl bg-white py-3.5 text-sm font-bold text-black hover:bg-zinc-200 transition-colors w-full shadow-lg shadow-white/5"
             >
-              <ExternalLink size={16} />
-              Visiter le site web
+              Visiter le site web <ExternalLink size={16} />
             </a>
           )}
 
-          {/* Actions Secondaires : Contacts */}
+          {/* Boutons Contacts (Secondary) */}
           {(ad.telephone_appel || ad.telephone_whatsapp) && (
             <div className="grid grid-cols-2 gap-3">
-              {ad.telephone_appel && (
+              {ad.telephone_appel ? (
                 <a
                   href={`tel:${ad.telephone_appel}`}
                   onClick={onTrack}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
                 >
-                  <Phone size={16} />
-                  Appeler
+                  <Phone size={16} /> Appeler
                 </a>
-              )}
+              ) : <div/>}
 
-              {ad.telephone_whatsapp && (
+              {ad.telephone_whatsapp ? (
                 <a
                   href={`https://wa.me/${ad.telephone_whatsapp.replace(/\D/g, "")}`}
                   target="_blank"
                   rel="noreferrer"
                   onClick={onTrack}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 py-3 text-sm font-medium hover:bg-[#25D366]/20 transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 text-[#25D366] border border-[#25D366]/20 py-3 text-sm font-semibold hover:bg-[#25D366]/20 transition-colors"
                 >
-                  <MessageCircle size={16} />
-                  WhatsApp
+                  <MessageCircle size={16} /> WhatsApp
                 </a>
-              )}
+              ) : <div/>}
             </div>
           )}
         </div>
@@ -184,21 +208,25 @@ function AdCard({ ad, onTrack }: { ad: any, onTrack: () => void }) {
   );
 }
 
-// Skeleton de chargement
+// Skeleton Loader
 function AdsSkeleton() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-      <div className="flex justify-between items-center pb-6 border-b border-white/5">
-         <div className="h-8 w-48 bg-white/5 rounded-lg animate-pulse" />
-         <div className="h-6 w-20 bg-white/5 rounded-full animate-pulse" />
-      </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <main className="mx-auto max-w-7xl px-4 py-12 space-y-12">
+      <div className="h-48 w-full bg-zinc-900 rounded-3xl animate-pulse border border-white/5" />
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="rounded-2xl border border-white/5 bg-zinc-900 h-[380px] animate-pulse flex flex-col">
-             <div className="h-48 bg-white/5 w-full rounded-t-2xl" />
-             <div className="p-5 space-y-4 flex-1">
-                <div className="h-6 w-3/4 bg-white/5 rounded" />
-                <div className="mt-auto h-10 w-full bg-white/5 rounded-xl" />
+          <div key={i} className="rounded-3xl border border-white/5 bg-zinc-900 h-[420px] animate-pulse flex flex-col overflow-hidden">
+             <div className="h-56 bg-white/5 w-full" />
+             <div className="p-6 space-y-4 flex-1">
+                <div className="h-6 w-3/4 bg-white/5 rounded-lg" />
+                <div className="h-4 w-1/2 bg-white/5 rounded-lg" />
+                <div className="mt-auto pt-4 space-y-3">
+                    <div className="h-12 w-full bg-white/5 rounded-xl" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="h-10 w-full bg-white/5 rounded-xl" />
+                        <div className="h-10 w-full bg-white/5 rounded-xl" />
+                    </div>
+                </div>
              </div>
           </div>
         ))}

@@ -7,252 +7,175 @@ import {
   Instagram,
   Linkedin,
   Mail,
-  Phone,
-  MapPin,
-  ShieldCheck,
   ArrowRight,
+  Send,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Globe,
 } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden border-t border-white/10 bg-zinc-950 pt-16 pb-8">
-      {/* Background premium */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,255,0,0.12),transparent_55%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.10),transparent_55%)]" />
-        <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:80px_80px]" />
-        <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.90)]" />
+    <footer className="relative overflow-hidden bg-zinc-950 pt-20 pb-10 border-t border-white/5">
+      {/* --- BACKGROUND AMBIANCE --- */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+         {/* Grille subtile */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]" />
+        {/* Glow Vert bas de page */}
+        <div className="absolute bottom-0 left-1/4 h-64 w-96 rounded-full bg-[#00FF00]/5 blur-[100px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4">
-        {/* Top grid */}
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4 mb-12">
-          {/* COL 1 : MARQUE */}
-          <div className="space-y-5">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-xl font-extrabold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-              aria-label="Retour à l'accueil de Sénégal Contact"
-            >
-              <span>
-                Sénégal
-                <span className="text-[#00FF00] drop-shadow-[0_0_18px_rgba(0,255,0,0.25)]">
-                  Contact
-                </span>
-              </span>
-            </Link>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              La plateforme de référence pour trouver les meilleurs professionnels
-              vérifiés au Sénégal. Simple, rapide et fiable.
-            </p>
-
-            {/* Mini CTA */}
-            <Link
-              href="/recherche"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-white/10 hover:border-[#00FF00]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-            >
-              Trouver un pro <ArrowRight size={14} aria-hidden="true" />
-            </Link>
-
-            <nav aria-label="Réseaux sociaux">
-              <div className="flex gap-3 pt-1">
-                <SocialLink href="#" icon={Facebook} label="Suivez-nous sur Facebook" />
-                <SocialLink href="#" icon={Instagram} label="Suivez-nous sur Instagram" />
-                <SocialLink href="#" icon={Linkedin} label="Suivez-nous sur LinkedIn" />
-                <SocialLink href="#" icon={Twitter} label="Suivez-nous sur Twitter" />
-              </div>
-            </nav>
-          </div>
-
-          {/* COL 2 : NAVIGATION */}
-          <nav aria-labelledby="footer-nav-title">
-            <h3 id="footer-nav-title" className="text-sm font-extrabold uppercase tracking-widest text-white/90 mb-5">
-              Navigation
-            </h3>
-            <ul className="space-y-3 text-sm text-zinc-400">
-              <li>
-                <Link
-                  href="/recherche"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-[#00FF00] transition-colors" aria-hidden="true" />
-                  Trouver un pro
+        {/* --- TOP SECTION: NEWSLETTER & BRAND --- */}
+        <div className="grid lg:grid-cols-2 gap-12 mb-16 items-start">
+            <div>
+                <Link href="/" className="inline-flex items-center gap-2 text-2xl font-black tracking-tighter text-white mb-6">
+                    Sénégal<span className="text-[#00FF00]">Contact</span>
                 </Link>
-              </li>
-              <li>
-                <Link
-                  href="/annonces"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-[#00FF00] transition-colors" aria-hidden="true" />
-                  Offres d&apos;emploi
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pro/register"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-[#00FF00] transition-colors" aria-hidden="true" />
-                  Inscrire mon entreprise
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pub"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-[#00FF00] transition-colors" aria-hidden="true" />
-                  Devenir partenaire
-                </Link>
-              </li>
-            </ul>
-          </nav>
+                <p className="text-zinc-400 max-w-md text-lg leading-relaxed">
+                    La plateforme de référence pour connecter les meilleurs artisans et entreprises avec les clients sénégalais.
+                    <span className="text-zinc-200 font-medium"> Fiabilité, Rapidité, Proximité.</span>
+                </p>
+            </div>
 
-          {/* COL 3 : LÉGAL */}
-          <nav aria-labelledby="footer-legal-title">
-            <h3 id="footer-legal-title" className="text-sm font-extrabold uppercase tracking-widest text-white/90 mb-5">
-              Informations
-            </h3>
-            <ul className="space-y-3 text-sm text-zinc-400">
-              <li>
-                <Link
-                  href="/about"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-                  À propos de nous
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/mentions-legales"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-                  Mentions légales
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/privacy"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-                  Politique de confidentialité
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="group inline-flex items-center gap-2 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/25 group-hover:bg-amber-400 transition-colors" aria-hidden="true" />
-                  Conditions d&apos;utilisation
-                </Link>
-              </li>
-            </ul>
-          </nav>
-
-          {/* COL 4 : CONTACT */}
-          <div>
-            <h3 id="footer-contact-title" className="text-sm font-extrabold uppercase tracking-widest text-white/90 mb-5">
-              Contact
-            </h3>
-
-            <address className="not-italic">
-              <ul className="space-y-4 text-sm text-zinc-400">
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#00FF00]" aria-hidden="true">
-                    <MapPin size={16} />
-                  </div>
-                  <span className="leading-relaxed">
-                    km14 Rte de Rufisque
-                    <br />
-                    Dakar, Sénégal
-                  </span>
-                </li>
-
-                <li className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#00FF00]" aria-hidden="true">
-                    <Phone size={16} />
-                  </div>
-                  <a
-                    href="tel:+221338948723"
-                    className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                    aria-label="Appeler le 33 894 87 23"
-                  >
-                    33 894 87 23
-                  </a>
-                </li>
-
-                <li className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#00FF00]" aria-hidden="true">
-                    <Phone size={16} />
-                  </div>
-                  <a
-                    href="tel:+221780103636"
-                    className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                    aria-label="Appeler le 78 010 36 36"
-                  >
-                    78 010 36 36
-                  </a>
-                </li>
-
-                <li className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#00FF00]" aria-hidden="true">
-                    <Mail size={16} />
-                  </div>
-                  <a
-                    href="mailto:contact@senegalcontacts.com"
-                    className="hover:text-white transition-colors break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
-                    aria-label="Envoyer un email à contact@senegalcontacts.com"
-                  >
-                    contact@senegalcontacts.com
-                  </a>
-                </li>
-              </ul>
-            </address>
-          </div>
+            <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                <h3 className="text-white font-bold text-lg mb-2">Restez informé des opportunités</h3>
+                <p className="text-zinc-500 text-sm mb-4">Recevez les meilleures annonces et conseils pro chaque semaine.</p>
+                <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+                    <input
+                        type="email"
+                        placeholder="votre@email.com"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all"
+                    />
+                    <button
+                        type="submit"
+                        className="bg-[#00FF00] hover:bg-[#00dd00] text-black px-5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                        aria-label="S'inscrire"
+                    >
+                        <Send size={20} />
+                    </button>
+                </form>
+            </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <p>
-            &copy; {currentYear} Sénégal Contact. Tous droits réservés.
-          </p>
+        {/* --- MIDDLE SECTION: LINKS GRID --- */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12 border-t border-white/5">
 
-          <div className="flex items-center gap-2 rounded-full border border-[#00FF00]/15 bg-[#00FF00]/5 px-3 py-1.5 text-[#00FF00]/90">
-            <ShieldCheck size={12} aria-hidden="true" />
-            <span className="font-semibold">Plateforme Sécurisée</span>
-          </div>
+            {/* Colonne 1 */}
+            <div>
+                <h4 className="text-white font-bold mb-6">Plateforme</h4>
+                <ul className="space-y-4">
+                    <FooterLink href="/recherche">Trouver un artisan</FooterLink>
+                    <FooterLink href="/annonces">Voir les annonces</FooterLink>
+                    <FooterLink href="/pricing">Tarifs Pro</FooterLink>
+                    <FooterLink href="/mobile">Application Mobile</FooterLink>
+                </ul>
+            </div>
+
+            {/* Colonne 2 */}
+            <div>
+                <h4 className="text-white font-bold mb-6">Entreprise</h4>
+                <ul className="space-y-4">
+                    <FooterLink href="/about">À propos</FooterLink>
+                    <FooterLink href="/blog">Blog & Conseils</FooterLink>
+                    <FooterLink href="/careers">Recrutement</FooterLink>
+                    <FooterLink href="/presse">Presse</FooterLink>
+                </ul>
+            </div>
+
+            {/* Colonne 3 */}
+            <div>
+                <h4 className="text-white font-bold mb-6">Support</h4>
+                <ul className="space-y-4">
+                    <FooterLink href="/help">Centre d'aide</FooterLink>
+                    <FooterLink href="/legal">Mentions légales</FooterLink>
+                    <FooterLink href="/privacy">Confidentialité</FooterLink>
+                    <FooterLink href="/contact">Nous contacter</FooterLink>
+                </ul>
+            </div>
+
+            {/* Colonne 4: Contact Rapide */}
+            <div>
+                 <h4 className="text-white font-bold mb-6">Nous trouver</h4>
+                 <ul className="space-y-4 text-sm text-zinc-400">
+                    <li className="flex items-start gap-3">
+                        <MapPin size={18} className="text-[#00FF00] shrink-0 mt-0.5" />
+                        <span>km14 Rte de Rufisque<br/>Dakar, Sénégal</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                        <Phone size={18} className="text-[#00FF00] shrink-0" />
+                        <a href="tel:+221770000000" className="hover:text-white transition-colors">+221 77 000 00 00</a>
+                    </li>
+                    <li className="flex items-center gap-3">
+                        <Mail size={18} className="text-[#00FF00] shrink-0" />
+                        <a href="mailto:hello@senegalcontact.com" className="hover:text-white transition-colors">hello@senegalcontact.com</a>
+                    </li>
+                 </ul>
+            </div>
+        </div>
+
+        {/* --- BOTTOM SECTION: COPYRIGHT & SOCIALS --- */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 text-[12px] leading-relaxed text-zinc-400">
+      {/* Left */}
+      <span className="font-medium text-zinc-300/90">
+        &copy; {currentYear} <span className="text-white/90">SenContact Pro</span>.
+      </span>
+
+      {/* Dot separator (desktop) */}
+      <span className="hidden md:block h-1 w-1 rounded-full bg-zinc-700" />
+
+      {/* Security pill */}
+      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur">
+        <ShieldCheck size={14} className="text-[#00FF00]" />
+        <span className="text-zinc-300/90">
+          Paiements sécurisés <span className="text-zinc-500">(Wave / Orange Money / Carte Bancaire)</span>
+        </span>
+      </div>
+    </div>
+
+
+            {/* Social Icons */}
+            <div className="flex gap-4">
+                <SocialIcon href="#" icon={Facebook} />
+                <SocialIcon href="#" icon={Twitter} />
+                <SocialIcon href="#" icon={Instagram} />
+                <SocialIcon href="#" icon={Linkedin} />
+            </div>
         </div>
       </div>
     </footer>
   );
 }
 
-function SocialLink({
-  href,
-  icon: Icon,
-  label,
-}: {
-  href: string;
-  icon: any;
-  label: string;
-}) {
+// Composant Lien avec effet de slide
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <a
-      href={href}
-      aria-label={label}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group relative flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-zinc-300 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#00FF00]/30 hover:bg-[#00FF00]/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FF00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-    >
-      <Icon size={18} />
-      <span className="pointer-events-none absolute inset-0 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100 bg-[#00FF00]/10 rounded-2xl" aria-hidden="true" />
-    </a>
+    <li>
+      <Link
+        href={href}
+        className="group flex items-center gap-2 text-sm text-zinc-400 hover:text-[#00FF00] transition-colors"
+      >
+        <span className="h-px w-0 bg-[#00FF00] transition-all group-hover:w-2" />
+        <span className="transition-transform group-hover:translate-x-1">{children}</span>
+      </Link>
+    </li>
   );
+}
+
+// Composant Icone Sociale
+function SocialIcon({ href, icon: Icon }: { href: string; icon: any }) {
+    return (
+        <a
+            href={href}
+            className="h-10 w-10 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white hover:scale-110 transition-all border border-transparent hover:border-white/10"
+        >
+            <Icon size={18} />
+        </a>
+    )
 }

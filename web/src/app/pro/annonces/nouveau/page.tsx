@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth.store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,14 +8,16 @@ import { useForm } from "react-hook-form";
 import { creerAnnonce } from "@/lib/annonces.api";
 import { getAllJobs, getLocations } from "@/lib/catalog.api";
 import { billingMe } from "@/lib/billing.api";
-import { Loader2, Send, AlertCircle, Briefcase, Search, MapPin } from "lucide-react";
+import { Loader2, Send, AlertTriangle, Briefcase, Search, MapPin, Phone, FileText, LayoutGrid, Globe, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { clsx } from "clsx";
+import Link from "next/link";
 
 type AnnonceForm = {
   titre: string;
   type: "OFFRE" | "DEMANDE";
-  categorie: string; // ID envoyé en string par le select HTML
-  zone_geographique: string; // ID envoyé en string
+  categorie: string;
+  zone_geographique: string;
   adresse_precise: string;
   description: string;
   telephone: string;
@@ -26,16 +28,14 @@ export default function NouvelleAnnoncePage() {
   const queryClient = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
 
-  // 1. Redirection si non connecté
+  // --- 1. DATA & AUTH ---
   useEffect(() => {
     if (!token) router.replace("/pro/login");
   }, [token, router]);
 
-  // 2. Chargement des données référentielles (Catégories & Zones)
   const { data: jobs } = useQuery({ queryKey: ["jobs-all"], queryFn: getAllJobs, staleTime: Infinity });
   const { data: locs } = useQuery({ queryKey: ["locs-all"], queryFn: getLocations, staleTime: Infinity });
 
-  // 3. Vérification Premium (pour les offres)
   const { data: billing } = useQuery({
     queryKey: ["billing-me"],
     queryFn: billingMe,
@@ -43,192 +43,280 @@ export default function NouvelleAnnoncePage() {
   });
   const isPremium = !!(billing?.is_active ?? billing?.active);
 
-  // 4. Gestion du Formulaire
+  // --- 2. FORM SETUP ---
   const { register, handleSubmit, watch, formState: { errors } } = useForm<AnnonceForm>({
     defaultValues: { type: "DEMANDE" }
   });
 
   const typeValue = watch("type");
+  const descriptionValue = watch("description") || "";
 
-  // 5. Mutation d'envoi
+  // --- 3. MUTATION ---
   const mutation = useMutation({
     mutationFn: async (data: AnnonceForm) => {
-      // Construction du payload exact attendu par Django
       const payload = {
-        titre: data.titre,
-        type: data.type, // "OFFRE" ou "DEMANDE"
-        description: data.description,
-        telephone: data.telephone,
-        adresse_precise: data.adresse_precise,
-        // Conversion des IDs
+        ...data,
         categorie: parseInt(data.categorie),
         zone_geographique: parseInt(data.zone_geographique),
       };
-
       return creerAnnonce(payload as any);
     },
     onSuccess: () => {
-      toast.success("Annonce publiée avec succès !");
+      toast.success("Votre annonce est en ligne !");
       queryClient.invalidateQueries({ queryKey: ["mes-annonces"] });
       queryClient.invalidateQueries({ queryKey: ["annonces"] });
       router.push("/pro/annonces");
     },
     onError: (err: any) => {
       console.error(err);
-      toast.error("Erreur lors de la publication. Vérifiez que tous les champs sont remplis.");
+      toast.error("Erreur. Vérifiez votre connexion ou les champs requis.");
     }
   });
 
   if (!token) return null;
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+    <main className="relative mx-auto max-w-3xl px-4 py-8 md:py-12">
 
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-white">Nouvelle Annonce</h1>
-        <p className="text-zinc-400 text-sm">
-          Publiez une offre ou une demande visible par toute la communauté.
+      {/* Background Ambience */}
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-96 h-96 bg-[#00FF00]/5 blur-[100px] rounded-full pointer-events-none -z-10" />
+
+      {/* Header */}
+      <div className="mb-8 space-y-2">
+        <Link href="/pro/annonces" className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm mb-4">
+             <ArrowLeft size={16} /> Retour à mes annonces
+        </Link>
+        <h1 className="text-3xl font-black tracking-tight text-white">
+          Nouvelle Annonce
+        </h1>
+        <p className="text-zinc-400">
+          Remplissez le formulaire ci-dessous pour publier votre besoin ou votre offre de service.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
+      <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-8">
 
-        {/* SÉLECTEUR DE TYPE */}
-        <div className="grid grid-cols-2 gap-4 p-1 bg-zinc-900 rounded-2xl border border-white/10">
-          <label className={`cursor-pointer rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
-            typeValue === "DEMANDE" ? "bg-blue-600 text-white shadow-lg" : "hover:bg-white/5 text-zinc-400"
-          }`}>
-            <input {...register("type")} type="radio" value="DEMANDE" className="hidden" />
-            <Search size={24} />
-            <span className="font-bold text-sm">Demande</span>
-            <span className="text-[10px] opacity-70">Je cherche un service</span>
-          </label>
+        {/* --- ÉTAPE 1 : TYPE D'ANNONCE --- */}
+        <section>
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 block">Type d'annonce</label>
+            <div className="grid grid-cols-2 gap-4">
 
-          <label className={`cursor-pointer rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
-            typeValue === "OFFRE" ? "bg-emerald-600 text-white shadow-lg" : "hover:bg-white/5 text-zinc-400"
-          }`}>
-            <input {...register("type")} type="radio" value="OFFRE" className="hidden" />
-            <Briefcase size={24} />
-            <span className="font-bold text-sm">Offre</span>
-            <span className="text-[10px] opacity-70">Je propose un service</span>
-          </label>
-        </div>
+            {/* Carte DEMANDE */}
+            <label className={clsx(
+                "cursor-pointer group relative overflow-hidden rounded-2xl border p-6 transition-all duration-300",
+                typeValue === "DEMANDE"
+                ? "bg-blue-600/10 border-blue-500 ring-1 ring-blue-500"
+                : "bg-zinc-900/50 border-white/5 hover:bg-zinc-800"
+            )}>
+                <input {...register("type")} type="radio" value="DEMANDE" className="hidden" />
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <div className={clsx(
+                        "rounded-full p-3 transition-colors",
+                        typeValue === "DEMANDE" ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-500 group-hover:text-white"
+                    )}>
+                        <Search size={24} strokeWidth={3} />
+                    </div>
+                    <div>
+                        <span className={clsx("block font-bold text-lg", typeValue === "DEMANDE" ? "text-white" : "text-zinc-300")}>Je cherche</span>
+                        <span className="text-xs text-zinc-500">Un artisan, un service...</span>
+                    </div>
+                </div>
+            </label>
 
-        {/* Alerte Premium pour les Offres */}
-        {typeValue === "OFFRE" && !isPremium && (
-          <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-4 text-sm text-amber-400 border border-amber-500/20">
-            <AlertCircle size={18} className="shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold mb-1">Attention, compte Premium requis</p>
-              <p className="opacity-80">
-                Vous pouvez rédiger votre offre, mais elle ne sera visible publiquement que si votre abonnement Pro est actif.
-              </p>
+            {/* Carte OFFRE */}
+            <label className={clsx(
+                "cursor-pointer group relative overflow-hidden rounded-2xl border p-6 transition-all duration-300",
+                typeValue === "OFFRE"
+                ? "bg-emerald-600/10 border-emerald-500 ring-1 ring-emerald-500"
+                : "bg-zinc-900/50 border-white/5 hover:bg-zinc-800"
+            )}>
+                <input {...register("type")} type="radio" value="OFFRE" className="hidden" />
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <div className={clsx(
+                        "rounded-full p-3 transition-colors",
+                        typeValue === "OFFRE" ? "bg-emerald-500 text-white" : "bg-zinc-800 text-zinc-500 group-hover:text-white"
+                    )}>
+                        <Briefcase size={24} strokeWidth={3} />
+                    </div>
+                    <div>
+                        <span className={clsx("block font-bold text-lg", typeValue === "OFFRE" ? "text-white" : "text-zinc-300")}>Je propose</span>
+                        <span className="text-xs text-zinc-500">Mes compétences, un emploi...</span>
+                    </div>
+                </div>
+            </label>
             </div>
-          </div>
-        )}
 
-        {/* CHAMPS FORMULAIRE */}
-        <div className="space-y-5 rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+            {/* Warning Premium pour les Offres */}
+            <div className={clsx(
+                "mt-4 overflow-hidden transition-all duration-500 ease-in-out",
+                typeValue === "OFFRE" && !isPremium ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            )}>
+                <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
+                    <AlertTriangle className="text-amber-500 shrink-0" size={20} />
+                    <div className="text-sm">
+                        <p className="font-bold text-amber-500">Visibilité restreinte</p>
+                        <p className="text-amber-200/80 mt-1">
+                            En tant que membre gratuit, votre offre sera soumise à validation et aura une visibilité limitée.
+                            <Link href="/pricing" className="underline hover:text-white ml-1">Passez Pro</Link> pour une publication instantanée.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-          {/* Titre */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Titre de l'annonce *</label>
-            <input
-              {...register("titre", { required: "Le titre est requis", minLength: { value: 5, message: "Min 5 caractères" } })}
-              className="w-full rounded-xl bg-black border border-white/10 px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-              placeholder={typeValue === "DEMANDE" ? "Ex: Cherche Plombier urgence Mermoz" : "Ex: Service de nettoyage à domicile"}
-            />
-            {errors.titre && <span className="text-xs text-red-400">{errors.titre.message}</span>}
-          </div>
+        {/* --- ÉTAPE 2 : DÉTAILS --- */}
+        <section className="space-y-6 bg-zinc-900/30 p-6 md:p-8 rounded-3xl border border-white/5 backdrop-blur-sm">
 
-          <div className="grid gap-5 md:grid-cols-2">
-            {/* Catégorie (API) */}
+            {/* Titre */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Secteur d'activité *</label>
-              <select
-                {...register("categorie", { required: "Catégorie requise" })}
-                className="w-full appearance-none rounded-xl bg-black border border-white/10 px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-              >
-                <option value="">Sélectionner...</option>
-                {jobs?.map((j) => (
-                  <option key={j.id} value={j.id}>{j.name || j.nom}</option>
-                ))}
-              </select>
-              {errors.categorie && <span className="text-xs text-red-400">{errors.categorie.message}</span>}
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">Titre de l'annonce <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                    <div className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-[#00FF00] transition-colors">
+                        <FileText size={18} />
+                    </div>
+                    <input
+                        {...register("titre", { required: "Ce champ est obligatoire", minLength: { value: 5, message: "Trop court (min 5 caractères)" } })}
+                        placeholder={typeValue === "DEMANDE" ? "Ex: Cherche Plombier urgence Mermoz" : "Ex: Service de nettoyage à domicile"}
+                        className="w-full rounded-xl bg-black/50 border border-white/10 pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all"
+                    />
+                </div>
+                {errors.titre && <p className="text-xs text-red-400 mt-1 ml-1">{errors.titre.message}</p>}
             </div>
 
-            {/* Téléphone */}
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Catégorie */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">Catégorie <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-[#00FF00] transition-colors">
+                            <LayoutGrid size={18} />
+                        </div>
+                        <select
+                            {...register("categorie", { required: "Sélectionnez une catégorie" })}
+                            className="w-full appearance-none rounded-xl bg-black/50 border border-white/10 pl-11 pr-10 py-3 text-white focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all cursor-pointer"
+                        >
+                            <option value="">Choisir...</option>
+                            {jobs?.map((j) => (
+                                <option key={j.id} value={j.id}>{j.name || j.nom}</option>
+                            ))}
+                        </select>
+                        {/* Custom arrow */}
+                        <div className="absolute right-4 top-4 pointer-events-none">
+                             <div className="h-0 w-0 border-l-[5px] border-l-transparent border-t-[6px] border-t-zinc-500 border-r-[5px] border-r-transparent" />
+                        </div>
+                    </div>
+                    {errors.categorie && <p className="text-xs text-red-400 mt-1 ml-1">{errors.categorie.message}</p>}
+                </div>
+
+                {/* Téléphone */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">Téléphone <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-[#00FF00] transition-colors">
+                            <Phone size={18} />
+                        </div>
+                        <input
+                            {...register("telephone", {
+                                required: "Requis",
+                                pattern: { value: /^\+?\d{8,15}$/, message: "Format invalide" }
+                            })}
+                            placeholder="77 000 00 00"
+                            className="w-full rounded-xl bg-black/50 border border-white/10 pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all"
+                        />
+                    </div>
+                    {errors.telephone && <p className="text-xs text-red-400 mt-1 ml-1">{errors.telephone.message}</p>}
+                </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Zone */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">Ville / Zone <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-[#00FF00] transition-colors">
+                            <Globe size={18} />
+                        </div>
+                        <select
+                            {...register("zone_geographique", { required: "Sélectionnez une zone" })}
+                            className="w-full appearance-none rounded-xl bg-black/50 border border-white/10 pl-11 pr-10 py-3 text-white focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all cursor-pointer"
+                        >
+                            <option value="">Choisir...</option>
+                            {locs?.map((l) => (
+                                <option key={l.id} value={l.id}>{l.name || l.nom}</option>
+                            ))}
+                        </select>
+                         <div className="absolute right-4 top-4 pointer-events-none">
+                             <div className="h-0 w-0 border-l-[5px] border-l-transparent border-t-[6px] border-t-zinc-500 border-r-[5px] border-r-transparent" />
+                        </div>
+                    </div>
+                    {errors.zone_geographique && <p className="text-xs text-red-400 mt-1 ml-1">{errors.zone_geographique.message}</p>}
+                </div>
+
+                {/* Adresse */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider ml-1">Quartier / Précision</label>
+                    <div className="relative group">
+                        <div className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-[#00FF00] transition-colors">
+                            <MapPin size={18} />
+                        </div>
+                        <input
+                            {...register("adresse_precise")}
+                            placeholder="Ex: Parcelles Assainies U26"
+                            className="w-full rounded-xl bg-black/50 border border-white/10 pl-11 pr-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Description */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Téléphone contact *</label>
-              <input
-                {...register("telephone", {
-                    required: "Téléphone requis",
-                    pattern: { value: /^\+?\d{8,15}$/, message: "Format invalide" }
-                })}
-                className="w-full rounded-xl bg-black border border-white/10 px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-                placeholder="77 000 00 00"
-              />
-               {errors.telephone && <span className="text-xs text-red-400">{errors.telephone.message}</span>}
-            </div>
-          </div>
-
-          {/* Localisation */}
-          <div className="grid gap-5 md:grid-cols-2">
-            {/* Zone (API) */}
-             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Ville / Zone *</label>
-              <select
-                {...register("zone_geographique", { required: "Zone requise" })}
-                className="w-full appearance-none rounded-xl bg-black border border-white/10 px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-              >
-                <option value="">Sélectionner une ville...</option>
-                {locs?.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name || l.nom}</option>
-                ))}
-              </select>
-              {errors.zone_geographique && <span className="text-xs text-red-400">{errors.zone_geographique.message}</span>}
-            </div>
-
-            {/* Adresse Précise */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Précision (Quartier)</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-zinc-600" />
-                <input
-                    {...register("adresse_precise")}
-                    className="w-full rounded-xl bg-black border border-white/10 pl-9 pr-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="Ex: Près de la mosquée..."
+                <div className="flex justify-between items-center ml-1">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Description détaillée <span className="text-red-500">*</span></label>
+                    <span className={clsx("text-xs font-medium", descriptionValue.length < 30 ? "text-red-400" : "text-[#00FF00]")}>
+                        {descriptionValue.length} / 30 min
+                    </span>
+                </div>
+                <textarea
+                    {...register("description", {
+                        required: "Décrivez votre besoin",
+                        minLength: { value: 30, message: "La description est trop courte (min 30 car.)" }
+                    })}
+                    rows={5}
+                    placeholder="Dites-nous en plus sur votre besoin..."
+                    className="w-full rounded-xl bg-black/50 border border-white/10 px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF00]/50 focus:ring-1 focus:ring-[#00FF00]/50 transition-all resize-none leading-relaxed"
                 />
-              </div>
+                {errors.description && <p className="text-xs text-red-400 mt-1 ml-1">{errors.description.message}</p>}
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Description détaillée *</label>
-            <textarea
-              {...register("description", {
-                  required: "Description requise",
-                  minLength: { value: 30, message: "Au moins 30 caractères pour être validé." }
-              })}
-              className="w-full min-h-[150px] rounded-xl bg-black border border-white/10 px-4 py-3 outline-none focus:border-indigo-500 transition-colors resize-none leading-relaxed"
-              placeholder="Décrivez précisément votre besoin ou ce que vous proposez..."
-            />
-            {errors.description && <span className="text-xs text-red-400">{errors.description.message}</span>}
-          </div>
+        </section>
+
+        {/* --- FOOTER ACTIONS --- */}
+        <div className="pt-4">
+            <button
+                type="submit"
+                disabled={mutation.isPending}
+                className={clsx(
+                    "w-full flex items-center justify-center gap-2 rounded-xl py-4 text-lg font-bold text-white transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed",
+                    typeValue === "OFFRE"
+                        ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20"
+                        : "bg-blue-600 hover:bg-blue-500 shadow-blue-900/20"
+                )}
+            >
+                {mutation.isPending ? (
+                    <>
+                        <Loader2 className="animate-spin" /> Publication...
+                    </>
+                ) : (
+                    <>
+                        <Send size={20} />
+                        {typeValue === "OFFRE" ? "Publier mon Offre" : "Publier ma Demande"}
+                    </>
+                )}
+            </button>
+            <p className="text-center text-xs text-zinc-500 mt-4">
+                En publiant, vous acceptez nos conditions d'utilisation.
+            </p>
         </div>
-
-        {/* BOUTON SOUMETTRE */}
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className={`w-full flex items-center justify-center gap-2 rounded-xl py-4 font-bold text-white transition-all shadow-lg shadow-white/5 ${
-            typeValue === "OFFRE" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-blue-600 hover:bg-blue-500"
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {mutation.isPending ? <Loader2 className="animate-spin" /> : <Send size={20} />}
-          {typeValue === "OFFRE" ? "Publier l'offre" : "Publier la demande"}
-        </button>
 
       </form>
     </main>

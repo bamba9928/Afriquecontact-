@@ -1,6 +1,13 @@
-"use client";
+import axios from "axios";
 
-import { api } from "./api";
+// --- CONFIGURATION ISOMORPHE (Serveur & Client) ---
+// On recrée une instance simple qui ne dépend pas du store d'auth (Zustand)
+const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+
+const publicApi = axios.create({
+  baseURL,
+  headers: { "Content-Type": "application/json" },
+});
 
 // --- TYPES ---
 
@@ -8,11 +15,10 @@ export type Job = {
   id: number;
   name: string;
   slug?: string;
-  category: number; // ID de la sous-catégorie
+  category: number;
   is_featured?: boolean;
 };
 
-// Structure hiérarchique des Catégories
 export type CategoryNode = {
   id: number;
   name: string;
@@ -23,14 +29,12 @@ export type CategoryNode = {
 
 export type LocationType = "COUNTRY" | "REGION" | "DEPARTMENT" | "CITY" | "DISTRICT" | "COMMUNE";
 
-// Structure hiérarchique des Lieux (Région -> Département/Ville -> Quartier)
 export type LocationNode = {
   id: number;
   name: string;
   slug: string;
   type: LocationType;
   children: LocationNode[];
-  // Champs additionnels éventuels renvoyés par le backend
   parent?: number | null;
   type_display?: string;
 };
@@ -43,9 +47,6 @@ function asList<T>(data: any): T[] {
   return [];
 }
 
-/**
- * Normalise un nœud de localisation en garantissant la structure attendue
- */
 function normalizeLocationNode(node: any): LocationNode | null {
   if (!node || typeof node !== "object") return null;
 
@@ -67,7 +68,7 @@ function normalizeLocationNode(node: any): LocationNode | null {
 // 1) Jobs
 export async function getAllJobs(): Promise<Job[]> {
   try {
-    const { data } = await api.get("/api/catalog/jobs/", {
+    const { data } = await publicApi.get("/api/catalog/jobs/", {
       params: { page_size: 1000 }
     });
     return asList<Job>(data);
@@ -77,9 +78,27 @@ export async function getAllJobs(): Promise<Job[]> {
   }
 }
 
+/**
+ * ✅ AJOUT : Récupère un job spécifique via son slug ou son nom.
+ * Utilisé pour les pages SEO /metiers/[slug]
+ */
+export async function getJobBySlug(slug: string): Promise<Job | undefined> {
+  // Idéalement, le backend devrait avoir un endpoint /api/catalog/jobs/{slug}/
+  // En attendant, on filtre côté client pour économiser une route backend spécifique
+  const jobs = await getAllJobs();
+  const normalizedSlug = slug.toLowerCase();
+
+  return jobs.find((j) =>
+    (j.slug && j.slug === normalizedSlug) ||
+    j.name.toLowerCase() === normalizedSlug ||
+    // Gestion basique des espaces remplacés par des tirets
+    j.name.toLowerCase().replace(/\s+/g, "-") === normalizedSlug
+  );
+}
+
 export async function getFeaturedJobs(): Promise<Job[]> {
   try {
-    const { data } = await api.get("/api/catalog/jobs/featured/");
+    const { data } = await publicApi.get("/api/catalog/jobs/featured/");
     return asList<Job>(data);
   } catch (error) {
     console.error("Erreur lors du chargement des métiers vedettes:", error);
@@ -90,7 +109,7 @@ export async function getFeaturedJobs(): Promise<Job[]> {
 // 2) Catégories (tree)
 export async function getCategoriesTree(): Promise<CategoryNode[]> {
   try {
-    const { data } = await api.get("/api/catalog/categories/tree/");
+    const { data } = await publicApi.get("/api/catalog/categories/tree/");
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error("Erreur lors du chargement des catégories:", error);
@@ -98,15 +117,13 @@ export async function getCategoriesTree(): Promise<CategoryNode[]> {
   }
 }
 
-// 3) Localisations (tree) : retourne une liste de REGIONS avec leur hiérarchie complète
+// 3) Localisations (tree)
 export async function getLocationsTree(): Promise<LocationNode[]> {
   try {
-    // ✅ CORRECTIF PRINCIPAL : On force une très grande page pour avoir tout l'arbre
-    const { data } = await api.get("/api/catalog/locations/tree/", {
+    const { data } = await publicApi.get("/api/catalog/locations/tree/", {
       params: { page_size: 10000 }
     });
 
-    // Normalisation : data peut être un tableau, un objet racine, ou un objet paginé { results: [...] }
     let rawList: any[] = [];
     if (Array.isArray(data)) {
         rawList = data;
@@ -119,15 +136,9 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
     const regions: LocationNode[] = [];
     const seenIds = new Set<number>();
 
-    /**
-     * Parcours récursif pour extraire toutes les régions
-     * avec leur hiérarchie complète (Départements -> Villes -> Quartiers)
-     */
     const extractRegions = (nodes: any[]) => {
       for (const node of nodes ?? []) {
         if (!node) continue;
-
-        // On ne garde que les nœuds de type REGION à la racine
         if (node.type === "REGION") {
           if (!seenIds.has(node.id)) {
             const normalized = normalizeLocationNode(node);
@@ -137,8 +148,6 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
             }
           }
         }
-
-        // Parcours récursif des enfants (au cas où la région est imbriquée dans un PAYS)
         if (Array.isArray(node.children) && node.children.length > 0) {
           extractRegions(node.children);
         }
@@ -146,8 +155,6 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
     };
 
     extractRegions(rawList);
-
-    // Tri alphabétique des régions
     return regions.sort((a, b) => a.name.localeCompare(b.name, "fr"));
   } catch (error) {
     console.error("Erreur lors du chargement de l'arbre des localisations:", error);
@@ -155,14 +162,14 @@ export async function getLocationsTree(): Promise<LocationNode[]> {
   }
 }
 
-// 4) Localisations (liste plate) - avec filtre optionnel par type
+// 4) Localisations (liste plate)
 export async function getLocations(params?: {
   type?: LocationType;
   parent?: number;
   page_size?: number;
 }): Promise<LocationNode[]> {
   try {
-    const { data } = await api.get("/api/catalog/locations/", {
+    const { data } = await publicApi.get("/api/catalog/locations/", {
       params: {
         page_size: 1000,
         ...(params ?? {}),
@@ -170,54 +177,29 @@ export async function getLocations(params?: {
     });
 
     const list = asList<any>(data);
-
-    // Normalisation avec garantie children: []
-    return list
-      .map(normalizeLocationNode)
-      .filter(Boolean) as LocationNode[];
+    return list.map(normalizeLocationNode).filter(Boolean) as LocationNode[];
   } catch (error) {
     console.error("Erreur lors du chargement des localisations:", error);
     return [];
   }
 }
 
-/**
- * Utilitaire : Trouver une région par ID dans l'arbre
- */
-export function findRegionById(
-  tree: LocationNode[],
-  regionId: number
-): LocationNode | undefined {
+// --- UTILS (Inchangés) ---
+
+export function findRegionById(tree: LocationNode[], regionId: number): LocationNode | undefined {
   return tree.find((r) => r.id === regionId);
 }
 
-/**
- * Utilitaire : Trouver un département dans une région
- */
-export function findDepartmentInRegion(
-  region: LocationNode,
-  departmentId: number
-): LocationNode | undefined {
+export function findDepartmentInRegion(region: LocationNode, departmentId: number): LocationNode | undefined {
   return region.children?.find((d) => d.id === departmentId && d.type === "DEPARTMENT");
 }
 
-/**
- * Utilitaire : Extraire tous les départements d'une région
- */
 export function getDepartmentsFromRegion(region: LocationNode): LocationNode[] {
   return (region.children ?? []).filter((child) => child.type === "DEPARTMENT");
 }
 
-/**
- * Utilitaire : Extraire tous les quartiers d'un département
- * ✅ Amélioré pour gérer à la fois :
- * 1. Département -> Quartier (structure plate)
- * 2. Département -> Ville/Commune -> Quartier (structure profonde)
- */
 export function getDistrictsFromDepartment(department: LocationNode): LocationNode[] {
   const directDistricts = (department.children ?? []).filter((c) => c.type === "DISTRICT");
-
-  // Chercher aussi dans les sous-niveaux (Villes ou Communes)
   const nestedDistricts: LocationNode[] = [];
   const subNodes = (department.children ?? []).filter((c) => c.type === "CITY" || c.type === "COMMUNE");
 
@@ -226,46 +208,28 @@ export function getDistrictsFromDepartment(department: LocationNode): LocationNo
           nestedDistricts.push(...node.children.filter((c) => c.type === "DISTRICT"));
       }
   }
-
   return [...directDistricts, ...nestedDistricts];
 }
 
-/**
- * Utilitaire : Recherche d'une localisation par ID (recherche récursive)
- */
-export function findLocationById(
-  tree: LocationNode[],
-  locationId: number
-): LocationNode | undefined {
+export function findLocationById(tree: LocationNode[], locationId: number): LocationNode | undefined {
   for (const node of tree) {
     if (node.id === locationId) return node;
-
     if (node.children && node.children.length > 0) {
       const found = findLocationById(node.children, locationId);
       if (found) return found;
     }
   }
-
   return undefined;
 }
 
-/**
- * Utilitaire : Obtenir le chemin complet d'une localisation (breadcrumb)
- * Retourne : [Région, Département, Ville, Quartier]
- */
-export function getLocationPath(
-  tree: LocationNode[],
-  locationId: number
-): LocationNode[] {
+export function getLocationPath(tree: LocationNode[], locationId: number): LocationNode[] {
   const path: LocationNode[] = [];
-
   const search = (nodes: LocationNode[], targetId: number): boolean => {
     for (const node of nodes) {
       if (node.id === targetId) {
         path.unshift(node);
         return true;
       }
-
       if (node.children && node.children.length > 0) {
         if (search(node.children, targetId)) {
           path.unshift(node);
@@ -275,30 +239,21 @@ export function getLocationPath(
     }
     return false;
   };
-
   search(tree, locationId);
   return path;
 }
 
-/**
- * Utilitaire : Vérifier si un département contient des quartiers
- */
 export function departmentHasDistricts(department: LocationNode): boolean {
     const districts = getDistrictsFromDepartment(department);
     return districts.length > 0;
 }
 
-/**
- * Utilitaire : Compter le nombre total de quartiers dans une région
- */
 export function countDistrictsInRegion(region: LocationNode): number {
   let count = 0;
-
   for (const dept of region.children ?? []) {
     if (dept.type === "DEPARTMENT") {
       count += getDistrictsFromDepartment(dept).length;
     }
   }
-
   return count;
 }

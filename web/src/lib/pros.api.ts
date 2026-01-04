@@ -63,6 +63,17 @@ export async function getProPublicDetails(id: number): Promise<ProPublic> {
   return data;
 }
 
+/**
+ *
+ * Permet de récupérer un pro via son slug (ex: "plomberie-diop") ou son ID sous forme de string.
+ */
+export async function getProBySlug(slugOrId: string): Promise<ProPublic> {
+  // L'URL dépend de votre configuration backend (ID vs Slug).
+  // En général, Django REST Framework accepte l'ID ou le slug si configuré via lookup_field.
+  const { data } = await api.get(`/api/pros/recherche/${slugOrId}/`);
+  return data;
+}
+
 // --- GESTION DU PROFIL (ME) ---
 
 export async function getProMe(): Promise<ProPrivate> {
@@ -85,10 +96,6 @@ export async function masquerMe(): Promise<ProPrivate> {
   return data;
 }
 
-/**
- * ✅ CORRECTION
- * Doit pointer vers /api/pros/me/media/ (correspond à path("me/media/", ...) dans urls.py)
- */
 export async function uploadMeMedia(payload: { file: File; type_media: "PHOTO" | "VIDEO" | "CV" }) {
   const fd = new FormData();
   fd.append("fichier", payload.file);
@@ -101,12 +108,6 @@ export async function uploadMeMedia(payload: { file: File; type_media: "PHOTO" |
   return data;
 }
 
-/**
- * ✅ AJOUT
- * Suppression d’un média du pro connecté.
- * Si ton backend expose bien la suppression sur /api/pros/me/media/<int:pk>/,
- * alors l’URL doit être celle-ci (cohérente avec "me/media/").
- */
 export async function deleteMeMedia(mediaId: number) {
   await api.delete(`/api/pros/me/media/${mediaId}/`);
 }
